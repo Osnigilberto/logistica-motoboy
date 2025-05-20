@@ -1,0 +1,36 @@
+:root {
+  --color-bg: #faf7f2;
+  --color-accent: #ca6c3d;
+  --color-accent-dark: #b2592e;
+  --color-text: #2d2d2d;
+  --color-muted: #777;
+  --color-border: #ccc;
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans), sans-serif;
+  line-height: 1.6;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
