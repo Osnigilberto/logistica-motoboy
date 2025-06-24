@@ -7,7 +7,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyDVE2vtBA23YIvWHzA6c7-LXgO0xTnwIIo",
   authDomain: "turboexpress-2f71a.firebaseapp.com",
   projectId: "turboexpress-2f71a",
-  storageBucket: "turboexpress-2f71a.firebasestorage.app",
+  storageBucket: "turboexpress-2f71a.appspot.com", // corrigido aqui
   messagingSenderId: "339110778126",
   appId: "1:339110778126:web:e377b049e6c7b3d2bef35f",
 };
@@ -16,7 +16,6 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Ativa persistência offline do Firestore
 enableIndexedDbPersistence(db).catch((err) => {
   if (err.code === "failed-precondition") {
     console.warn("Persistência offline não ativada: múltiplas abas abertas");
