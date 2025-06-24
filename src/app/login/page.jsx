@@ -1,8 +1,10 @@
 "use client";
+export const dynamic = 'force-dynamic';
+
 import { useSearchParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import styles from "./login.module.css";
-import { auth } from "@/firebase/firebaseConfig";
+import { auth } from "../../firebase/firebaseConfig"; // ajuste o caminho conforme sua estrutura
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -21,29 +23,33 @@ export default function LoginPage() {
   const [senha, setSenha] = useState("");
   const [confirmaSenha, setConfirmaSenha] = useState("");
   const [mostrarSenha, setMostrarSenha] = useState(false);
+  const [mensagem, setMensagem] = useState("");
+  const [erro, setErro] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErro("");
+    setMensagem("");
 
     try {
       if (mode === "cadastro") {
         if (senha !== confirmaSenha) {
-          alert("As senhas não conferem.");
+          setErro("As senhas não conferem.");
           return;
         }
         const userCredential = await createUserWithEmailAndPassword(auth, email, senha);
         await updateProfile(userCredential.user, { displayName: nome });
 
-        alert("Cadastro realizado com sucesso!");
+        setMensagem("Cadastro realizado com sucesso!");
         setMode("login");
-        router.push("/dashboard"); // redireciona após cadastro
+        router.push("/dashboard");
       } else {
         await signInWithEmailAndPassword(auth, email, senha);
-        alert("Login realizado com sucesso!");
-        router.push("/dashboard"); // redireciona após login
+        setMensagem("Login realizado com sucesso!");
+        router.push("/dashboard");
       }
     } catch (error) {
-      alert(error.message);
+      setErro(error.message);
     }
   };
 
@@ -57,15 +63,47 @@ export default function LoginPage() {
         </h1>
 
         <div className={styles.toggle}>
-          <button onClick={() => setMode("login")} className={mode === "login" ? styles.active : ""}>Entrar</button>
-          <button onClick={() => setMode("cadastro")} className={mode === "cadastro" ? styles.active : ""}>Cadastrar</button>
+          <button
+            onClick={() => {
+              setMode("login");
+              setMensagem("");
+              setErro("");
+            }}
+            className={mode === "login" ? styles.active : ""}
+          >
+            Entrar
+          </button>
+          <button
+            onClick={() => {
+              setMode("cadastro");
+              setMensagem("");
+              setErro("");
+            }}
+            className={mode === "cadastro" ? styles.active : ""}
+          >
+            Cadastrar
+          </button>
         </div>
 
         <form onSubmit={handleSubmit} className={styles.form}>
           {mode === "cadastro" && (
-            <input type="text" placeholder="Seu nome" value={nome} onChange={(e) => setNome(e.target.value)} required className={styles.input} />
+            <input
+              type="text"
+              placeholder="Seu nome"
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              required
+              className={styles.input}
+            />
           )}
-          <input type="email" placeholder="Seu email" value={email} onChange={(e) => setEmail(e.target.value)} required className={styles.input} />
+          <input
+            type="email"
+            placeholder="Seu email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className={styles.input}
+          />
 
           <div className={styles.passwordWrapper}>
             <input
@@ -110,6 +148,9 @@ export default function LoginPage() {
           <button type="submit" className={styles.button}>
             {mode === "login" ? "Entrar" : "Cadastrar"}
           </button>
+
+          {mensagem && <p className={styles.successMsg}>{mensagem}</p>}
+          {erro && <p className={styles.errorMsg}>{erro}</p>}
         </form>
 
         <p className={styles.switch}>
@@ -118,12 +159,16 @@ export default function LoginPage() {
               {mode === "login" ? (
                 <>
                   Não é motoboy?{" "}
-                  <a href="/login?role=cliente" className={styles.link}>Login como cliente</a>
+                  <a href="/login?role=cliente" className={styles.link}>
+                    Login como cliente
+                  </a>
                 </>
               ) : (
                 <>
                   Já tem conta?{" "}
-                  <a href="/login?role=motoboy" className={styles.link}>Login motoboy</a>
+                  <a href="/login?role=motoboy" className={styles.link}>
+                    Login motoboy
+                  </a>
                 </>
               )}
             </>
@@ -132,12 +177,16 @@ export default function LoginPage() {
               {mode === "login" ? (
                 <>
                   É motoboy?{" "}
-                  <a href="/login?role=motoboy" className={styles.link}>Login motoboy</a>
+                  <a href="/login?role=motoboy" className={styles.link}>
+                    Login motoboy
+                  </a>
                 </>
               ) : (
                 <>
                   Já tem conta?{" "}
-                  <a href="/login?role=cliente" className={styles.link}>Login cliente</a>
+                  <a href="/login?role=cliente" className={styles.link}>
+                    Login cliente
+                  </a>
                 </>
               )}
             </>
