@@ -1,5 +1,5 @@
 export const metadata = {
-  title: "Logística Motoboy",
+  title: "Turbo Express",
   description: "Plataforma de entregas rápidas com motoboys parceiros",
 };
 

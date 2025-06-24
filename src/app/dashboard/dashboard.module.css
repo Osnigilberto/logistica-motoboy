@@ -1,0 +1,24 @@
+.dashboard {
+  padding: 2rem;
+  max-width: 800px;
+  margin: 0 auto;
+  font-family: 'Inter', sans-serif;
+  color: #333;
+}
+
+.dashboard h1 {
+  font-size: 2rem;
+  color: #ca6c3d;
+  margin-bottom: 1rem;
+}
+
+.dashboard p {
+  font-size: 1.2rem;
+}
+
+.loading {
+  padding: 2rem;
+  text-align: center;
+  font-size: 1.2rem;
+  color: #555;
+}

@@ -6,11 +6,23 @@
   justify-content: space-between;
   align-items: center;
   padding: 20px 25px;
-  z-index: 1000;
+  z-index: 1100;
   border-bottom: 1px solid #eee;
 }
 
-.logo {
+.logoWrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logoImg {
+  height: 100px;
+  width: auto;
+  object-fit: contain;
+}
+
+.logoText {
   font-weight: 700;
   font-size: 1.3rem;
   color: #ca6c3d;
@@ -19,17 +31,22 @@
 .nav {
   display: flex;
   gap: 25px;
+  align-items: center;
+  transition: right 0.3s ease;
 }
 
 .navLink {
   color: #ca6c3d;
   font-weight: 600;
   text-decoration: none;
-  transition: color 0.3s ease;
+  padding: 5px 10px;
+  border-radius: 6px;
+  transition: background 0.3s ease, color 0.3s ease;
 }
 
 .navLink:hover {
-  color: #b2592e;
+  background: #ca6c3d;
+  color: white;
 }
 
 .btn {
@@ -46,6 +63,20 @@
   background: #b2592e;
 }
 
+.btnAlt{
+  background: #ca6c3d;
+  color: white;
+  padding: 10px 25px;
+  border-radius: 8px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.3s ease;
+}
+
+.btnAlt:hover {
+  background: #b2592e;
+}
+
 .hamburger {
   display: none;
   flex-direction: column;
@@ -55,7 +86,7 @@
   background: transparent;
   border: none;
   cursor: pointer;
-  z-index: 1100;
+  z-index: 1200;
 }
 
 .hamburger span {
@@ -66,6 +97,7 @@
   transition: all 0.3s ease;
 }
 
+/* RESPONSIVO */
 @media (max-width: 768px) {
   .nav {
     position: fixed;
@@ -100,6 +132,10 @@
   }
 
   .btn {
-    display: none;
+    display: none; /* esconde botão no header no mobile, pode ser alterado se quiser mostrar dentro do menu */
+  }
+
+  .logoText {
+    display: none; /* esconde texto no mobile para economizar espaço */
   }
 }

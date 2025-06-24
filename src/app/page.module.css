@@ -2,87 +2,19 @@
   font-family: 'Inter', sans-serif;
   color: #2d2d2d;
   max-width: 1200px;
+  width: 100%; /* garantir que não extrapola */
   margin: 0 auto;
   padding: 0 20px;
 }
 
-/* Navbar fixa */
-.header {
-  position: sticky;
-  top: 0;
-  z-index: 999;
-  background: #faf7f2;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 0;
-  border-bottom: 1px solid #eee;
-  box-shadow: 0 2px 5px rgb(0 0 0 / 0.05);
-}
-
-.logo {
-  font-weight: 700;
-  font-size: 1.8rem;
-  color: #ca6c3d;
-}
-
-.nav {
-  display: flex;
-  gap: 25px;
-  align-items: center;
-}
-
-.navLink {
-  color: #2d2d2d;
-  font-weight: 600;
-  text-decoration: none;
-  padding: 5px 10px;
-  border-radius: 6px;
-  transition: background 0.3s ease;
-}
-
-.navLink:hover {
-  background: #ca6c3d;
-  color: white;
-}
-
-.nav + a.btn {
-  background: #ca6c3d;
-  color: #fff;
-  padding: 10px 25px;
-  border-radius: 8px;
-  font-weight: 600;
-  text-decoration: none;
-  transition: background 0.3s ease;
-}
-
-.nav + a.btn:hover {
-  background: #b2592e;
-}
-
-.btn{
-  background: #ca6c3d;
-  color: #fff;
-  padding: 10px 25px;
-  border-radius: 8px;
-  font-weight: 600;
-  text-decoration: none;
-  transition: background 0.3s ease;
-}
-
-.btn:hover{
-  background: #b2592e;
-}
-
-
 /* Hero com efeito parallax */
 .hero {
   height: 70vh;
-  background-image: url('/hero-bg.png');
+  background-image: url('/logoexpress.png');
   background-attachment: fixed;
-  background-position: center center; /* centraliza a imagem */
+  background-position: center center;
   background-repeat: no-repeat;
-  background-size: contain; /* faz a imagem caber inteira, sem cortar */
+  background-size: contain;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -90,8 +22,8 @@
   color: #fff;
   position: relative;
   padding: 0 20px;
+  box-sizing: border-box; /* evita overflow por padding */
 }
-
 
 .hero::before {
   content: "";
@@ -105,6 +37,8 @@
   position: relative;
   z-index: 1;
   max-width: 700px;
+  width: 100%; /* para evitar que extrapole */
+  box-sizing: border-box;
 }
 
 .hero h1 {
@@ -145,6 +79,7 @@
   max-width: 900px;
   margin-left: auto;
   margin-right: auto;
+  box-sizing: border-box;
 }
 
 .feature {
@@ -155,6 +90,7 @@
   text-align: center;
   transition: transform 0.4s cubic-bezier(0.4,0,0.2,1), box-shadow 0.4s ease;
   cursor: default;
+  box-sizing: border-box;
 }
 
 .feature:hover {
@@ -172,6 +108,8 @@
   max-width: 700px;
   margin: 0 auto 100px;
   text-align: center;
+  box-sizing: border-box;
+  padding: 0 10px;
 }
 
 .about h2 {
@@ -189,6 +127,7 @@
   margin: 0 auto 120px;
   box-shadow: 0 6px 15px rgba(0,0,0,0.05);
   text-align: center;
+  box-sizing: border-box;
 }
 
 .contact h2 {
@@ -201,6 +140,7 @@
   display: flex;
   flex-direction: column;
   gap: 15px;
+  box-sizing: border-box;
 }
 
 .contactForm input,
@@ -211,6 +151,7 @@
   font-size: 1rem;
   resize: vertical;
   font-family: inherit;
+  box-sizing: border-box;
 }
 
 .contactForm button {
@@ -235,30 +176,23 @@
   border-top: 1px solid #eee;
   color: #777;
   font-size: 0.9rem;
+  box-sizing: border-box;
 }
 
 /* Responsividade */
-/* --- Navbar --- */
 @media (max-width: 768px) {
-  .nav {
-    display: none; /* esconder menu grande no mobile */
-  }
   .header {
     padding: 15px 20px;
   }
+
   .logo {
     font-size: 1.5rem;
   }
-}
 
-/* Para ativar menu responsivo (hamburger) precisa JS, mas por enquanto só esconder menu. */
-
-/* --- Hero --- */
-@media (max-width: 768px) {
   .hero {
-    height: 50vh; /* menor altura em mobile */
-    background-attachment: scroll; /* parallax não funciona bem no mobile */
-    background-size: cover; /* preenche área */
+    height: 50vh;
+    background-attachment: scroll;
+    background-size: cover;
   }
 
   .hero h1 {
@@ -273,19 +207,14 @@
     padding: 12px 30px;
     font-size: 1rem;
   }
-}
 
-@media (max-width: 768px) {
   .features {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    justify-content: center;
-    align-items: center;
+    grid-template-columns: repeat(2, 1fr); /* só uma coluna no mobile */
     gap: 15px;
     margin: 60px 0;
     max-width: 100%;
-    padding: 15px 15px;
-
+    padding: 15px;
+    box-sizing: border-box;
   }
 
   .feature {
@@ -293,26 +222,35 @@
   }
 }
 
-
-/* --- Contact --- */
 @media (max-width: 480px) {
   .contact {
     padding: 40px 15px;
     max-width: 100%;
   }
+
   .contactForm input,
   .contactForm textarea {
     font-size: 0.9rem;
   }
+
   .contactForm button {
     padding: 12px;
     font-size: 1rem;
   }
-}
 
-/* --- Geral --- */
-@media (max-width: 480px) {
   .page {
     padding: 0 15px;
   }
+
+  .features {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .feature {
+    padding: 16px;
+  }
+
+ 
 }

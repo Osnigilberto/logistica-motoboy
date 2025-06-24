@@ -18,9 +18,10 @@ export default function Home() {
         <div className={styles.heroContent}>
           <h1>Entregas rápidas e seguras para o seu negócio</h1>
           <p>Conectamos você aos melhores motoboys parceiros para agilizar suas entregas.</p>
-          <Link href="/cadastro" className={styles.cta}>
+          <Link href="/login?role=cliente" className={styles.cta}>
             Comece Agora
           </Link>
+
         </div>
       </section>
 
@@ -67,7 +68,7 @@ export default function Home() {
       </section>
 
       <footer className={styles.footer}>
-        © {new Date().getFullYear()} Logística Motoboy - Todos os direitos reservados.
+        © {new Date().getFullYear()} Turbo Express - Todos os direitos reservados.
       </footer>
     </div>
   );
