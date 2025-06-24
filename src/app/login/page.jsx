@@ -1,17 +1,16 @@
 "use client";
-export const dynamic = 'force-dynamic';
 
+import React, { Suspense, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useState } from "react";
 import styles from "./login.module.css";
-import { auth } from "../../firebase/firebaseConfig"; // ajuste o caminho conforme sua estrutura
+import { auth } from "@/firebase/firebaseConfig";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   updateProfile,
 } from "firebase/auth";
 
-export default function LoginPage() {
+function LoginContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const role = searchParams.get("role") || "cliente";
@@ -23,33 +22,29 @@ export default function LoginPage() {
   const [senha, setSenha] = useState("");
   const [confirmaSenha, setConfirmaSenha] = useState("");
   const [mostrarSenha, setMostrarSenha] = useState(false);
-  const [mensagem, setMensagem] = useState("");
-  const [erro, setErro] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setErro("");
-    setMensagem("");
 
     try {
       if (mode === "cadastro") {
         if (senha !== confirmaSenha) {
-          setErro("As senhas não conferem.");
+          alert("As senhas não conferem.");
           return;
         }
         const userCredential = await createUserWithEmailAndPassword(auth, email, senha);
         await updateProfile(userCredential.user, { displayName: nome });
 
-        setMensagem("Cadastro realizado com sucesso!");
+        alert("Cadastro realizado com sucesso!");
         setMode("login");
         router.push("/dashboard");
       } else {
         await signInWithEmailAndPassword(auth, email, senha);
-        setMensagem("Login realizado com sucesso!");
+        alert("Login realizado com sucesso!");
         router.push("/dashboard");
       }
     } catch (error) {
-      setErro(error.message);
+      alert(error.message);
     }
   };
 
@@ -58,27 +53,23 @@ export default function LoginPage() {
       <div className={styles.card}>
         <h1 className={styles.title}>
           {mode === "login"
-            ? isMotoboy ? "Login do Motoboy" : "Login do Cliente"
-            : isMotoboy ? "Cadastro do Motoboy" : "Cadastro do Cliente"}
+            ? isMotoboy
+              ? "Login do Motoboy"
+              : "Login do Cliente"
+            : isMotoboy
+            ? "Cadastro do Motoboy"
+            : "Cadastro do Cliente"}
         </h1>
 
         <div className={styles.toggle}>
           <button
-            onClick={() => {
-              setMode("login");
-              setMensagem("");
-              setErro("");
-            }}
+            onClick={() => setMode("login")}
             className={mode === "login" ? styles.active : ""}
           >
             Entrar
           </button>
           <button
-            onClick={() => {
-              setMode("cadastro");
-              setMensagem("");
-              setErro("");
-            }}
+            onClick={() => setMode("cadastro")}
             className={mode === "cadastro" ? styles.active : ""}
           >
             Cadastrar
@@ -148,51 +139,50 @@ export default function LoginPage() {
           <button type="submit" className={styles.button}>
             {mode === "login" ? "Entrar" : "Cadastrar"}
           </button>
-
-          {mensagem && <p className={styles.successMsg}>{mensagem}</p>}
-          {erro && <p className={styles.errorMsg}>{erro}</p>}
         </form>
 
         <p className={styles.switch}>
           {isMotoboy ? (
+            mode === "login" ? (
+              <>
+                Não é motoboy?{" "}
+                <a href="/login?role=cliente" className={styles.link}>
+                  Login como cliente
+                </a>
+              </>
+            ) : (
+              <>
+                Já tem conta?{" "}
+                <a href="/login?role=motoboy" className={styles.link}>
+                  Login motoboy
+                </a>
+              </>
+            )
+          ) : mode === "login" ? (
             <>
-              {mode === "login" ? (
-                <>
-                  Não é motoboy?{" "}
-                  <a href="/login?role=cliente" className={styles.link}>
-                    Login como cliente
-                  </a>
-                </>
-              ) : (
-                <>
-                  Já tem conta?{" "}
-                  <a href="/login?role=motoboy" className={styles.link}>
-                    Login motoboy
-                  </a>
-                </>
-              )}
+              É motoboy?{" "}
+              <a href="/login?role=motoboy" className={styles.link}>
+                Login motoboy
+              </a>
             </>
           ) : (
             <>
-              {mode === "login" ? (
-                <>
-                  É motoboy?{" "}
-                  <a href="/login?role=motoboy" className={styles.link}>
-                    Login motoboy
-                  </a>
-                </>
-              ) : (
-                <>
-                  Já tem conta?{" "}
-                  <a href="/login?role=cliente" className={styles.link}>
-                    Login cliente
-                  </a>
-                </>
-              )}
+              Já tem conta?{" "}
+              <a href="/login?role=cliente" className={styles.link}>
+                Login cliente
+              </a>
             </>
           )}
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <React.Suspense fallback={<p>Carregando...</p>}>
+      <LoginContent />
+    </React.Suspense>
   );
 }
