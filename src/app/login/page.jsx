@@ -1,76 +1,99 @@
 "use client";
-
-import React, { Suspense, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import styles from "./login.module.css";
+import React, { useState } from "react";
 import { auth, db } from "@/firebase/firebaseConfig";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  updateProfile,
-  GoogleAuthProvider,
   signInWithPopup,
+  GoogleAuthProvider,
+  updateProfile,
 } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
-import { FcGoogle } from "react-icons/fc";
-import SocialButton from "./SocialButton";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { useRouter, useSearchParams } from "next/navigation";
+import styles from "./login.module.css";
 
-function LoginContent() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const role = searchParams.get("role") || "cliente";
-  const isMotoboy = role === "motoboy";
-
+export default function LoginPage() {
   const [mode, setMode] = useState("login");
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [confirmaSenha, setConfirmaSenha] = useState("");
   const [mostrarSenha, setMostrarSenha] = useState(false);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const role = searchParams.get("role") || "cliente";
 
-  const redirecionarConformePerfil = async (uid) => {
-    const ref = doc(db, "usuarios", uid);
-    const snap = await getDoc(ref);
-    const data = snap.data();
-    if (snap.exists() && data?.perfilCompleto) {
+  const googleProvider = new GoogleAuthProvider();
+
+  async function checarPerfil(uid) {
+    const docRef = doc(db, "usuarios", uid);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists() && docSnap.data().perfilCompleto) {
       router.push("/dashboard");
     } else {
       router.push("/completar-perfil");
     }
-  };
+  }
 
-  const fazerLoginGoogle = async () => {
-    const provider = new GoogleAuthProvider();
+  const handleGoogleLogin = async () => {
     try {
-      const result = await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
-      await redirecionarConformePerfil(user.uid);
+
+      // Verifica se já existe no Firestore
+      const userRef = doc(db, "usuarios", user.uid);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists()) {
+        // Cria perfil inicial
+        await setDoc(userRef, {
+          nome: user.displayName || "",
+          email: user.email,
+          role,
+          perfilCompleto: false,
+        });
+      }
+
+      await checarPerfil(user.uid);
     } catch (error) {
-      alert(error.message);
+      alert("Erro no login Google: " + error.message);
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    try {
-      if (mode === "cadastro") {
-        if (senha !== confirmaSenha) {
-          alert("As senhas não conferem.");
-          return;
-        }
+    if (mode === "cadastro") {
+      if (senha !== confirmaSenha) {
+        alert("As senhas não conferem.");
+        return;
+      }
+
+      try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, senha);
         await updateProfile(userCredential.user, { displayName: nome });
-        alert("Cadastro realizado com sucesso!");
-        setMode("login");
-        await redirecionarConformePerfil(userCredential.user.uid);
-      } else {
-        const userCredential = await signInWithEmailAndPassword(auth, email, senha);
-        alert("Login realizado com sucesso!");
-        await redirecionarConformePerfil(userCredential.user.uid);
+
+        const userRef = doc(db, "usuarios", userCredential.user.uid);
+        await setDoc(userRef, {
+          nome,
+          email,
+          role,
+          perfilCompleto: false,
+        });
+
+        alert("Cadastro realizado com sucesso! Complete seu perfil.");
+        router.push("/completar-perfil");
+      } catch (error) {
+        alert(error.message);
       }
-    } catch (error) {
-      alert(error.message);
+    } else {
+      // Login email/senha
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, senha);
+        await checarPerfil(userCredential.user.uid);
+      } catch (error) {
+        alert(error.message);
+      }
     }
   };
 
@@ -78,37 +101,40 @@ function LoginContent() {
     <div className={styles.container}>
       <div className={styles.card}>
         <h1 className={styles.title}>
-          {mode === "login"
-            ? isMotoboy
-              ? "Login do Motoboy"
-              : "Login do Cliente"
-            : isMotoboy
-            ? "Cadastro do Motoboy"
-            : "Cadastro do Cliente"}
+          {mode === "login" ? `Login do ${role}` : `Cadastro do ${role}`}
         </h1>
-
-        <SocialButton
-          onClick={fazerLoginGoogle}
-          icon={FcGoogle}
-          text="Entrar com Google"
-        />
-
-        <div className={styles.divisor}><span>ou use seu e-mail</span></div>
 
         <div className={styles.toggle}>
           <button
             onClick={() => setMode("login")}
-            className={`${styles.toggleButton} ${mode === "login" ? styles.active : ""}`}
+            className={mode === "login" ? styles.active : ""}
           >
             Entrar
           </button>
           <button
             onClick={() => setMode("cadastro")}
-            className={`${styles.toggleButton} ${mode === "cadastro" ? styles.active : ""}`}
+            className={mode === "cadastro" ? styles.active : ""}
           >
             Cadastrar
           </button>
         </div>
+
+        <button onClick={handleGoogleLogin} className={styles.googleButton} aria-label="Login com Google">
+          {/* Ícone real do Google */}
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 533.5 544.3"
+            width="20"
+            height="20"
+            style={{ verticalAlign: "middle", marginRight: 8 }}
+          >
+            <path fill="#4285F4" d="M533.5 278.4c0-17.6-1.5-34.5-4.5-50.9H272v96.4h146.9c-6.4 34.7-25.9 64.1-55.4 83.8v69.7h89.5c52.2-48 82.5-119 82.5-198.9z" />
+            <path fill="#34A853" d="M272 544.3c74.1 0 136.3-24.5 181.7-66.3l-89.5-69.7c-24.9 16.7-56.7 26.5-92.2 26.5-70.9 0-131-47.9-152.5-112.2H27.3v70.6C72.3 490 166 544.3 272 544.3z" />
+            <path fill="#FBBC05" d="M119.5 324.6c-6.2-18.7-6.2-38.7 0-57.4v-70.6H27.3c-24.9 49.5-24.9 108.7 0 158.2l92.2-30.2z" />
+            <path fill="#EA4335" d="M272 213.7c39.2 0 74.2 13.5 101.9 39.8l76.3-76.3C402.9 129 344.6 96 272 96c-106 0-196.1 76.1-227.9 178.7l92.2 30.2c21.5-64.3 81.6-112.2 152.5-112.2z" />
+          </svg>
+          Entrar com Google
+        </button>
 
         <form onSubmit={handleSubmit} className={styles.form}>
           {mode === "cadastro" && (
@@ -121,6 +147,7 @@ function LoginContent() {
               className={styles.input}
             />
           )}
+
           <input
             type="email"
             placeholder="Seu email"
@@ -174,51 +201,7 @@ function LoginContent() {
             {mode === "login" ? "Entrar" : "Cadastrar"}
           </button>
         </form>
-
-        <p className={styles.switch}>
-          {isMotoboy ? (
-            mode === "login" ? (
-              <>
-                Não é motoboy?{" "}
-                <a href="/login?role=cliente" className={styles.link}>
-                  Login como cliente
-                </a>
-              </>
-            ) : (
-              <>
-                Já tem conta?{" "}
-                <a href="/login?role=motoboy" className={styles.link}>
-                  Login motoboy
-                </a>
-              </>
-            )
-          ) : mode === "login" ? (
-            <>
-              É motoboy?{" "}
-              <a href="/login?role=motoboy" className={styles.link}>
-                Login motoboy
-              </a>
-            </>
-          ) : (
-            <>
-              Já tem conta?{" "}
-              <a href="/login?role=cliente" className={styles.link}>
-                Login cliente
-              </a>
-            </>
-          )}
-        </p>
-
-        <a href="/" className={styles.homeLink}>← Voltar para a home</a>
       </div>
     </div>
-  );
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense fallback={<p>Carregando...</p>}>
-      <LoginContent />
-    </Suspense>
   );
 }

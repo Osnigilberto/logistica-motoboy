@@ -1,10 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
 import { auth, db } from "@/firebase/firebaseConfig";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import styles from "./completarPerfil.module.css";
-import VMasker from "vanilla-masker";
 
 export default function CompletarPerfil() {
   const router = useRouter();
@@ -15,23 +14,20 @@ export default function CompletarPerfil() {
     localizacao: "",
     telefone: "",
   });
-
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const user = auth.currentUser;
-    if (!user) return router.push("/login");
+    if (!user) {
+      router.push("/login");
+      return;
+    }
 
     const carregarDados = async () => {
-      const ref = doc(db, "usuarios", user.uid);
-      const snap = await getDoc(ref);
-      if (snap.exists()) {
-        const data = snap.data();
-        if (data.perfilCompleto) {
-          router.push("/dashboard");
-        } else {
-          setDados((prev) => ({ ...prev, ...data }));
-        }
+      const docRef = doc(db, "usuarios", user.uid);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        setDados((prev) => ({ ...prev, ...docSnap.data() }));
       }
       setLoading(false);
     };
@@ -39,31 +35,14 @@ export default function CompletarPerfil() {
     carregarDados();
   }, [router]);
 
-  const aplicarMascara = (name, value) => {
-    if (name === "cnpj") {
-      const digitos = value.replace(/\D/g, "");
-      if (digitos.length <= 11) return VMasker.toPattern(digitos, "999.999.999-99");
-      return VMasker.toPattern(digitos, "99.999.999/9999-99");
-    }
-
-    if (name === "telefone") {
-      const digitos = value.replace(/\D/g, "");
-      if (digitos.length <= 10) return VMasker.toPattern(digitos, "(99) 9999-9999");
-      return VMasker.toPattern(digitos, "(99) 99999-9999");
-    }
-
-    return value;
+  const validarDocumento = (valor) => {
+    const cnpjRegex = /^\d{14}$/;
+    const cpfRegex = /^\d{11}$/;
+    return cpfRegex.test(valor) || cnpjRegex.test(valor);
   };
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    const formatado = aplicarMascara(name, value);
-    setDados({ ...dados, [name]: formatado });
-  };
-
-  const validarDocumento = (valor) => {
-    const digits = valor.replace(/\D/g, "");
-    return /^\d{11}$/.test(digits) || /^\d{14}$/.test(digits);
+    setDados({ ...dados, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e) => {
@@ -72,19 +51,14 @@ export default function CompletarPerfil() {
     if (!user) return router.push("/login");
 
     if (!validarDocumento(dados.cnpj)) {
-      alert("CPF ou CNPJ inválido.");
+      alert("CPF ou CNPJ inválido. Use apenas números.");
       return;
     }
-
-    const role = new URLSearchParams(window.location.search).get("role") || "cliente";
 
     await setDoc(
       doc(db, "usuarios", user.uid),
       {
         ...dados,
-        uid: user.uid,
-        email: user.email,
-        role,
         perfilCompleto: true,
       },
       { merge: true }
@@ -94,18 +68,11 @@ export default function CompletarPerfil() {
     router.push("/dashboard");
   };
 
-  if (loading) {
-    return (
-      <div className={styles.spinnerWrapper}>
-        <div className={styles.spinner}></div>
-        <p>Carregando perfil...</p>
-      </div>
-    );
-  }
+  if (loading) return <p>Carregando...</p>;
 
   return (
     <form onSubmit={handleSubmit} className={styles.formContainer}>
-      <h2 className={styles.title}>Complete seu perfil</h2>
+      <h2>Complete seu perfil</h2>
       <input
         name="nome"
         placeholder="Nome completo"
@@ -116,7 +83,7 @@ export default function CompletarPerfil() {
       />
       <input
         name="cnpj"
-        placeholder="CPF ou CNPJ"
+        placeholder="CPF ou CNPJ (somente números)"
         required
         onChange={handleChange}
         value={dados.cnpj}
@@ -143,14 +110,9 @@ export default function CompletarPerfil() {
         value={dados.telefone}
         className={styles.input}
       />
-
       <button type="submit" className={styles.button}>
         Salvar
       </button>
-
-      <a href="/dashboard" className={styles.voltar}>
-        ← Voltar para o dashboard
-      </a>
     </form>
   );
 }

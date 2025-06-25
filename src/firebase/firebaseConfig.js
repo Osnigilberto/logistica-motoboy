@@ -1,4 +1,3 @@
-// src/firebase/firebaseConfig.js
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
@@ -7,7 +6,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyDVE2vtBA23YIvWHzA6c7-LXgO0xTnwIIo",
   authDomain: "turboexpress-2f71a.firebaseapp.com",
   projectId: "turboexpress-2f71a",
-  storageBucket: "turboexpress-2f71a.appspot.com", // corrigido aqui
+  storageBucket: "turboexpress-2f71a.appspot.com",
   messagingSenderId: "339110778126",
   appId: "1:339110778126:web:e377b049e6c7b3d2bef35f",
 };
