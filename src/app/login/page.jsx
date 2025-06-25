@@ -3,12 +3,17 @@
 import React, { Suspense, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import styles from "./login.module.css";
-import { auth } from "@/firebase/firebaseConfig";
+import { auth, db } from "@/firebase/firebaseConfig";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   updateProfile,
+  GoogleAuthProvider,
+  signInWithPopup,
 } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { FcGoogle } from "react-icons/fc";
+import SocialButton from "./SocialButton";
 
 function LoginContent() {
   const searchParams = useSearchParams();
@@ -23,6 +28,28 @@ function LoginContent() {
   const [confirmaSenha, setConfirmaSenha] = useState("");
   const [mostrarSenha, setMostrarSenha] = useState(false);
 
+  const redirecionarConformePerfil = async (uid) => {
+    const ref = doc(db, "usuarios", uid);
+    const snap = await getDoc(ref);
+    const data = snap.data();
+    if (snap.exists() && data?.perfilCompleto) {
+      router.push("/dashboard");
+    } else {
+      router.push("/completar-perfil");
+    }
+  };
+
+  const fazerLoginGoogle = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      await redirecionarConformePerfil(user.uid);
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -34,14 +61,13 @@ function LoginContent() {
         }
         const userCredential = await createUserWithEmailAndPassword(auth, email, senha);
         await updateProfile(userCredential.user, { displayName: nome });
-
         alert("Cadastro realizado com sucesso!");
         setMode("login");
-        router.push("/dashboard");
+        await redirecionarConformePerfil(userCredential.user.uid);
       } else {
-        await signInWithEmailAndPassword(auth, email, senha);
+        const userCredential = await signInWithEmailAndPassword(auth, email, senha);
         alert("Login realizado com sucesso!");
-        router.push("/dashboard");
+        await redirecionarConformePerfil(userCredential.user.uid);
       }
     } catch (error) {
       alert(error.message);
@@ -61,16 +87,24 @@ function LoginContent() {
             : "Cadastro do Cliente"}
         </h1>
 
+        <SocialButton
+          onClick={fazerLoginGoogle}
+          icon={FcGoogle}
+          text="Entrar com Google"
+        />
+
+        <div className={styles.divisor}><span>ou use seu e-mail</span></div>
+
         <div className={styles.toggle}>
           <button
             onClick={() => setMode("login")}
-            className={mode === "login" ? styles.active : ""}
+            className={`${styles.toggleButton} ${mode === "login" ? styles.active : ""}`}
           >
             Entrar
           </button>
           <button
             onClick={() => setMode("cadastro")}
-            className={mode === "cadastro" ? styles.active : ""}
+            className={`${styles.toggleButton} ${mode === "cadastro" ? styles.active : ""}`}
           >
             Cadastrar
           </button>
@@ -174,6 +208,8 @@ function LoginContent() {
             </>
           )}
         </p>
+
+        <a href="/" className={styles.homeLink}>← Voltar para a home</a>
       </div>
     </div>
   );
@@ -181,8 +217,8 @@ function LoginContent() {
 
 export default function LoginPage() {
   return (
-    <React.Suspense fallback={<p>Carregando...</p>}>
+    <Suspense fallback={<p>Carregando...</p>}>
       <LoginContent />
-    </React.Suspense>
+    </Suspense>
   );
 }

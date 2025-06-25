@@ -1,13 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { auth, db } from "@/firebase/firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
 import styles from "./dashboard.module.css";
 
 export default function Dashboard() {
   const router = useRouter();
-  const pathname = usePathname();
   const [carregando, setCarregando] = useState(true);
   const [usuario, setUsuario] = useState(null);
   const [erro, setErro] = useState(null);
@@ -23,7 +22,7 @@ export default function Dashboard() {
         const userRef = doc(db, "usuarios", user.uid);
         const userDoc = await getDoc(userRef);
 
-        if (!userDoc.exists()) {
+        if (!userDoc.exists() || !userDoc.data().perfilCompleto) {
           router.push("/completar-perfil");
           return;
         }
@@ -31,6 +30,7 @@ export default function Dashboard() {
         setUsuario(userDoc.data());
         setErro(null);
       } catch (error) {
+        console.error(error);
         setErro("Erro ao carregar dados. Verifique sua conexão.");
       } finally {
         setCarregando(false);
@@ -40,23 +40,49 @@ export default function Dashboard() {
     return () => unsubscribe();
   }, [router]);
 
-  if (carregando) return <p className={styles.loading}>Carregando...</p>;
+  if (carregando) {
+    return (
+      <div className={styles.spinnerWrapper}>
+        <div className={styles.spinner}></div>
+        <p>Carregando dados do usuário...</p>
+      </div>
+    );
+  }
 
   if (erro) {
     return (
-      <main style={{ padding: "2rem" }}>
-        <p>{erro}</p>
-        <button onClick={() => router.push(pathname)}>Tentar Novamente</button>
+      <main className={styles.main}>
+        <p className={styles.erro}>{erro}</p>
+        <button onClick={() => router.refresh()} className={styles.button}>
+          Tentar novamente
+        </button>
       </main>
     );
   }
 
   return (
-    <main style={{ padding: "2rem" }}>
-      <h1>Bem-vindo, {usuario.nome || "usuário"}!</h1>
+    <main className={styles.main}>
+      <h1 className={styles.titulo}>
+        Bem-vindo, {usuario.nome || "usuário"}!
+      </h1>
       <p>Empresa: {usuario.empresa || "não informado"}</p>
-      <p>Você é um {usuario.role}.</p>
-      <button onClick={() => router.push("/completar-perfil")}>Editar Perfil</button>
+      <p>Tipo de conta: <strong>{usuario.role}</strong></p>
+
+      <div className={styles.botoes}>
+        <button
+          onClick={() => router.push("/dashboard/editar-perfil")}
+          className={styles.button}
+        >
+          Editar Perfil
+        </button>
+
+        <button
+          onClick={() => auth.signOut().then(() => router.push("/login"))}
+          className={styles.logout}
+        >
+          Sair
+        </button>
+      </div>
     </main>
   );
 }

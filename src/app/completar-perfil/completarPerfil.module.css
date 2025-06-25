@@ -1,19 +1,21 @@
 .formContainer {
-  padding: 2rem;
-  max-width: 500px;
-  margin: auto;
+  max-width: 450px;
+  margin: 40px auto;
+  background: #fff;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
   display: flex;
   flex-direction: column;
   gap: 16px;
-  background-color: #fafafa;
-  border-radius: 12px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+  animation: fadeIn 0.4s ease-in-out;
 }
 
-.formContainer h2 {
-  margin-bottom: 10px;
+.title {
   text-align: center;
   color: #ca6c3d;
+  font-size: 1.5rem;
+  margin-bottom: 10px;
 }
 
 .input {
@@ -21,20 +23,139 @@
   border: 1px solid #ccc;
   border-radius: 8px;
   font-size: 1rem;
-  font-family: inherit;
 }
 
 .button {
-  padding: 14px;
   background: #ca6c3d;
   color: white;
-  font-weight: 600;
+  padding: 12px;
   border: none;
   border-radius: 8px;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 0.3s ease;
+  transition: background 0.3s;
 }
 
 .button:hover {
   background: #b2592e;
 }
+
+.voltar {
+  display: block;
+  text-align: center;
+  margin-top: 12px;
+  font-size: 0.9rem;
+  color: #888;
+  text-decoration: none;
+}
+
+.voltar:hover {
+  color: #ca6c3d;
+}
+
+.loading {
+  text-align: center;
+  padding: 50px;
+  font-size: 1.2rem;
+  color: #666;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.formContainer {
+  max-width: 450px;
+  margin: 40px auto;
+  background: #fff;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: fadeIn 0.4s ease-in-out;
+}
+
+@media (max-width: 500px) {
+  .formContainer {
+    margin: 20px;
+    padding: 20px;
+  }
+}
+
+.title {
+  text-align: center;
+  color: #ca6c3d;
+  font-size: 1.5rem;
+  margin-bottom: 10px;
+}
+
+.input {
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+.button {
+  background: #ca6c3d;
+  color: white;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.button:hover {
+  background: #b2592e;
+}
+
+.voltar {
+  display: block;
+  text-align: center;
+  margin-top: 12px;
+  font-size: 0.9rem;
+  color: #888;
+  text-decoration: none;
+}
+
+.voltar:hover {
+  color: #ca6c3d;
+}
+
+.spinnerWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 80vh;
+  color: #888;
+  font-size: 1rem;
+}
+
+.spinner {
+  border: 4px solid #eee;
+  border-top: 4px solid #ca6c3d;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 12px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+

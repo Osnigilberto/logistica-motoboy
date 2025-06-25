@@ -1,12 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 import { auth, db } from "@/firebase/firebaseConfig";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
-import styles from "./completarPerfil.module.css";
+import styles from "../../completar-perfil/completarPerfil.module.css";
 import VMasker from "vanilla-masker";
 
-export default function CompletarPerfil() {
+export default function EditarPerfil() {
   const router = useRouter();
   const [dados, setDados] = useState({
     nome: "",
@@ -15,28 +15,22 @@ export default function CompletarPerfil() {
     localizacao: "",
     telefone: "",
   });
-
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return router.push("/login");
 
-    const carregarDados = async () => {
+    const carregarPerfil = async () => {
       const ref = doc(db, "usuarios", user.uid);
       const snap = await getDoc(ref);
       if (snap.exists()) {
-        const data = snap.data();
-        if (data.perfilCompleto) {
-          router.push("/dashboard");
-        } else {
-          setDados((prev) => ({ ...prev, ...data }));
-        }
+        setDados((prev) => ({ ...prev, ...snap.data() }));
       }
       setLoading(false);
     };
 
-    carregarDados();
+    carregarPerfil();
   }, [router]);
 
   const aplicarMascara = (name, value) => {
@@ -57,13 +51,7 @@ export default function CompletarPerfil() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    const formatado = aplicarMascara(name, value);
-    setDados({ ...dados, [name]: formatado });
-  };
-
-  const validarDocumento = (valor) => {
-    const digits = valor.replace(/\D/g, "");
-    return /^\d{11}$/.test(digits) || /^\d{14}$/.test(digits);
+    setDados({ ...dados, [name]: aplicarMascara(name, value) });
   };
 
   const handleSubmit = async (e) => {
@@ -71,26 +59,13 @@ export default function CompletarPerfil() {
     const user = auth.currentUser;
     if (!user) return router.push("/login");
 
-    if (!validarDocumento(dados.cnpj)) {
-      alert("CPF ou CNPJ inválido.");
-      return;
-    }
-
-    const role = new URLSearchParams(window.location.search).get("role") || "cliente";
-
     await setDoc(
       doc(db, "usuarios", user.uid),
-      {
-        ...dados,
-        uid: user.uid,
-        email: user.email,
-        role,
-        perfilCompleto: true,
-      },
+      { ...dados },
       { merge: true }
     );
 
-    alert("Perfil salvo com sucesso!");
+    alert("Perfil atualizado com sucesso!");
     router.push("/dashboard");
   };
 
@@ -105,33 +80,34 @@ export default function CompletarPerfil() {
 
   return (
     <form onSubmit={handleSubmit} className={styles.formContainer}>
-      <h2 className={styles.title}>Complete seu perfil</h2>
+      <h2 className={styles.title}>Editar Perfil</h2>
+
       <input
         name="nome"
         placeholder="Nome completo"
-        required
         onChange={handleChange}
         value={dados.nome}
         className={styles.input}
+        required
       />
       <input
         name="cnpj"
         placeholder="CPF ou CNPJ"
-        required
         onChange={handleChange}
         value={dados.cnpj}
         className={styles.input}
+        required
       />
       <input
         name="empresa"
-        placeholder="Nome da empresa"
+        placeholder="Empresa"
         onChange={handleChange}
         value={dados.empresa}
         className={styles.input}
       />
       <input
         name="localizacao"
-        placeholder="Cidade / Estado"
+        placeholder="Localização"
         onChange={handleChange}
         value={dados.localizacao}
         className={styles.input}
@@ -145,11 +121,11 @@ export default function CompletarPerfil() {
       />
 
       <button type="submit" className={styles.button}>
-        Salvar
+        Salvar Alterações
       </button>
 
       <a href="/dashboard" className={styles.voltar}>
-        ← Voltar para o dashboard
+        ← Voltar
       </a>
     </form>
   );
