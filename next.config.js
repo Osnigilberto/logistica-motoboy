@@ -9,7 +9,6 @@ const withPWA = require("next-pwa")({
 
 const nextConfig = {
   reactStrictMode: true,    // ativa o modo estrito do React, ajuda a detectar problemas
-  swcMinify: true,          // usa o compilador SWC para minificar JS mais rápido
   // Configuração para suportar imagens externas, se precisar:
   images: {
     domains: ['example.com'],  // coloque aqui domínios de onde quer carregar imagens externas

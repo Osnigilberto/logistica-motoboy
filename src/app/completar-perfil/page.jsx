@@ -1,118 +1,77 @@
 "use client";
-import { useEffect, useState } from "react";
-import { auth, db } from "@/firebase/firebaseConfig";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+
+import { useState, useEffect } from "react";
+import { useAuth } from "@/context/AuthProvider";
 import { useRouter } from "next/navigation";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { db } from "@/firebase/firebaseClient";
 import styles from "./completarPerfil.module.css";
 
 export default function CompletarPerfil() {
+  const { user, loading } = useAuth();
   const router = useRouter();
-  const [dados, setDados] = useState({
-    nome: "",
-    cnpj: "",
+  const [form, setForm] = useState({
     empresa: "",
-    localizacao: "",
+    cnpjCpf: "",
     telefone: "",
+    rua: "",
+    numero: "",
+    cidade: "",
+    estado: "",
+    pais: "",
+    responsavel: "",
+    contatoResponsavel: "",
   });
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const user = auth.currentUser;
-    if (!user) {
-      router.push("/login");
-      return;
-    }
+    if (!loading && !user) router.push("/login");
+  }, [user, loading]);
 
-    const carregarDados = async () => {
-      const docRef = doc(db, "usuarios", user.uid);
+  useEffect(() => {
+    async function loadData() {
+      if (!user) return;
+      const docRef = doc(db, "users", user.uid);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
-        setDados((prev) => ({ ...prev, ...docSnap.data() }));
+        setForm(docSnap.data());
       }
-      setLoading(false);
-    };
-
-    carregarDados();
-  }, [router]);
-
-  const validarDocumento = (valor) => {
-    const cnpjRegex = /^\d{14}$/;
-    const cpfRegex = /^\d{11}$/;
-    return cpfRegex.test(valor) || cnpjRegex.test(valor);
-  };
-
-  const handleChange = (e) => {
-    setDados({ ...dados, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const user = auth.currentUser;
-    if (!user) return router.push("/login");
-
-    if (!validarDocumento(dados.cnpj)) {
-      alert("CPF ou CNPJ inválido. Use apenas números.");
-      return;
     }
+    loadData();
+  }, [user]);
 
-    await setDoc(
-      doc(db, "usuarios", user.uid),
-      {
-        ...dados,
-        perfilCompleto: true,
-      },
-      { merge: true }
-    );
+  function handleChange(e) {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  }
 
-    alert("Perfil salvo com sucesso!");
+  async function save(e) {
+    e.preventDefault();
+    if (!user) return;
+    const docRef = doc(db, "users", user.uid);
+    await updateDoc(docRef, { ...form, perfilCompleto: true });
     router.push("/dashboard");
-  };
+  }
 
-  if (loading) return <p>Carregando...</p>;
+  if (loading || !user) return <p>Carregando...</p>;
 
   return (
-    <form onSubmit={handleSubmit} className={styles.formContainer}>
+    <form onSubmit={save} className={styles.formContainer}>
       <h2>Complete seu perfil</h2>
-      <input
-        name="nome"
-        placeholder="Nome completo"
-        required
-        onChange={handleChange}
-        value={dados.nome}
-        className={styles.input}
-      />
-      <input
-        name="cnpj"
-        placeholder="CPF ou CNPJ (somente números)"
-        required
-        onChange={handleChange}
-        value={dados.cnpj}
-        className={styles.input}
-      />
-      <input
-        name="empresa"
-        placeholder="Nome da empresa"
-        onChange={handleChange}
-        value={dados.empresa}
-        className={styles.input}
-      />
-      <input
-        name="localizacao"
-        placeholder="Cidade / Estado"
-        onChange={handleChange}
-        value={dados.localizacao}
-        className={styles.input}
-      />
-      <input
-        name="telefone"
-        placeholder="Telefone"
-        onChange={handleChange}
-        value={dados.telefone}
-        className={styles.input}
-      />
-      <button type="submit" className={styles.button}>
-        Salvar
-      </button>
+
+      <input name="empresa" placeholder="Empresa" value={form.empresa} onChange={handleChange} required className={styles.input} />
+      <input name="cnpjCpf" placeholder="CNPJ ou CPF" value={form.cnpjCpf} onChange={handleChange} required className={styles.input} />
+      <input name="telefone" placeholder="Telefone" value={form.telefone} onChange={handleChange} required className={styles.input} />
+      <input name="rua" placeholder="Rua" value={form.rua} onChange={handleChange} required className={styles.input} />
+      <input name="numero" placeholder="Número" value={form.numero} onChange={handleChange} required className={styles.input} />
+      <input name="cidade" placeholder="Cidade" value={form.cidade} onChange={handleChange} required className={styles.input} />
+      <input name="estado" placeholder="Estado" value={form.estado} onChange={handleChange} required className={styles.input} />
+      <input name="pais" placeholder="País" value={form.pais} onChange={handleChange} required className={styles.input} />
+      <input name="cep" placeholder="CEP" value={form.cep} onChange={handleChange} required className={styles.input} />
+      <input name="responsavel" placeholder="Responsável" value={form.responsavel} onChange={handleChange} required className={styles.input} />
+      <input name="contatoResponsavel" placeholder="Contato do responsável" value={form.contatoResponsavel} onChange={handleChange} required className={styles.input} />
+      <input name="email" placeholder="Email" value={form.email} onChange={handleChange} required className={styles.input} />
+
+
+      <button type="submit" className={styles.button}>Salvar</button>
     </form>
   );
 }

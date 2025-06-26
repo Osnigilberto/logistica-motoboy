@@ -1,66 +1,44 @@
 "use client";
+
 import { useEffect, useState } from "react";
-import { auth, db } from "@/firebase/firebaseConfig";
-import { doc, getDoc } from "firebase/firestore";
+import { useAuth } from "@/context/AuthProvider";
 import { useRouter } from "next/navigation";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/firebase/firebaseClient";
 import styles from "./dashboard.module.css";
 
-export default function Dashboard() {
+export default function DashboardPage() {
+  const { user, loading } = useAuth();
   const router = useRouter();
-  const [usuario, setUsuario] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [erro, setErro] = useState(null);
+  const [perfil, setPerfil] = useState(null);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
-      if (!user) {
-        router.push("/login");
-        return;
+    if (!loading && !user) router.push("/login");
+  }, [user, loading]);
+
+  useEffect(() => {
+    async function fetchPerfil() {
+      if (!user) return;
+      const docRef = doc(db, "users", user.uid);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (!data.perfilCompleto) router.push("/completar-perfil");
+        else setPerfil(data);
       }
+    }
+    fetchPerfil();
+  }, [user]);
 
-      try {
-        const docRef = doc(db, "usuarios", user.uid);
-        const docSnap = await getDoc(docRef);
-
-        if (!docSnap.exists() || !docSnap.data().perfilCompleto) {
-          router.push("/completar-perfil");
-          return;
-        }
-
-        setUsuario(docSnap.data());
-        setErro(null);
-      } catch {
-        setErro("Erro ao carregar dados. Verifique sua conexão.");
-      } finally {
-        setLoading(false);
-      }
-    });
-
-    return () => unsubscribe();
-  }, [router]);
-
-  if (loading) return <p className={styles.loading}>Carregando...</p>;
-
-  if (erro)
-    return (
-      <main style={{ padding: "2rem" }}>
-        <p>{erro}</p>
-        <button onClick={() => router.refresh()}>Tentar novamente</button>
-      </main>
-    );
+  if (loading || !perfil) return <p>Carregando...</p>;
 
   return (
-    <main style={{ padding: "2rem" }}>
-      <h1>Bem-vindo, {usuario.nome || "usuário"}!</h1>
-      <p>Empresa: {usuario.empresa || "não informada"}</p>
-      <p>Você é um(a) {usuario.role}.</p>
-      <button onClick={() => router.push("/completar-perfil")}>Editar Perfil</button>
-      <button onClick={async () => {
-        await auth.signOut();
-        router.push("/login");
-      }}>
-        Sair
-      </button>
+    <main className={styles.main}>
+      <h1>Bem-vindo, {perfil.name}!</h1>
+      <p>Empresa: {perfil.empresa || "não informada"}</p>
+      <p>Função: {perfil.role}</p>
+      <button className={styles.button} onClick={() => router.push("/completar-perfil")}>Editar Perfil</button>
+      <button className={styles.logout} onClick={() => auth.signOut().then(() => router.push("/login"))}>Sair</button>
     </main>
   );
 }

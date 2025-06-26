@@ -1,26 +1,18 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
+import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDVE2vtBA23YIvWHzA6c7-LXgO0xTnwIIo",
-  authDomain: "turboexpress-2f71a.firebaseapp.com",
-  projectId: "turboexpress-2f71a",
-  storageBucket: "turboexpress-2f71a.appspot.com",
-  messagingSenderId: "339110778126",
-  appId: "1:339110778126:web:e377b049e6c7b3d2bef35f",
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-
-enableIndexedDbPersistence(db).catch((err) => {
-  if (err.code === "failed-precondition") {
-    console.warn("Persistência offline não ativada: múltiplas abas abertas");
-  } else if (err.code === "unimplemented") {
-    console.warn("Persistência offline não suportada pelo navegador");
-  }
-});
 
 export { auth, db };
