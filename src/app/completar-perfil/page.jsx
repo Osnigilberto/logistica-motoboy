@@ -1,77 +1,264 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useAuth } from "@/context/AuthProvider";
-import { useRouter } from "next/navigation";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { db } from "@/firebase/firebaseClient";
-import styles from "./completarPerfil.module.css";
+import { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthProvider';
+import { useRouter } from 'next/navigation';
+import styles from './completarPerfil.module.css';
 
 export default function CompletarPerfil() {
-  const { user, loading } = useAuth();
+  const { user, profile, loading } = useAuth();
   const router = useRouter();
+
   const [form, setForm] = useState({
-    empresa: "",
-    cnpjCpf: "",
-    telefone: "",
-    rua: "",
-    numero: "",
-    cidade: "",
-    estado: "",
-    pais: "",
-    responsavel: "",
-    contatoResponsavel: "",
+    nome: '',
+    tipo: 'cliente',
+    documento: '',
+    telefone: '',
+    rua: '',
+    numero: '',
+    cidade: '',
+    estado: '',
+    pais: '',
+    responsavel: '',
+    contatoResponsavel: '',
   });
 
-  useEffect(() => {
-    if (!loading && !user) router.push("/login");
-  }, [user, loading]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  // Máscaras simples
+  const maskDocumento = (value) => {
+    // Remove tudo que não for número
+    let v = value.replace(/\D/g, '');
+    if (form.tipo === 'cliente') {
+      // CNPJ: 00.000.000/0000-00
+      v = v
+        .replace(/^(\d{2})(\d)/, '$1.$2')
+        .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+        .replace(/\.(\d{3})(\d)/, '.$1/$2')
+        .replace(/(\d{4})(\d)/, '$1-$2');
+      v = v.slice(0, 18);
+    } else {
+      // CPF: 000.000.000-00
+      v = v
+        .replace(/^(\d{3})(\d)/, '$1.$2')
+        .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+        .replace(/\.(\d{3})(\d)/, '.$1-$2');
+      v = v.slice(0, 14);
+    }
+    return v;
+  };
+
+  const maskTelefone = (value) => {
+    let v = value.replace(/\D/g, '');
+    if (v.length > 10) {
+      // (00) 00000-0000
+      v = v.replace(/^(\d{2})(\d{5})(\d{4}).*/, '($1) $2-$3');
+    } else {
+      // (00) 0000-0000
+      v = v.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
+    }
+    return v;
+  };
 
   useEffect(() => {
-    async function loadData() {
-      if (!user) return;
-      const docRef = doc(db, "users", user.uid);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        setForm(docSnap.data());
+    if (!loading) {
+      if (!user) {
+        router.push('/login');
+      } else if (profile) {
+        router.push('/dashboard');
       }
     }
-    loadData();
-  }, [user]);
+  }, [loading, user, profile, router]);
 
-  function handleChange(e) {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  }
+  const handleChange = (e) => {
+    let { name, value } = e.target;
 
-  async function save(e) {
+    if (name === 'documento') {
+      value = maskDocumento(value);
+    } else if (name === 'telefone' || name === 'contatoResponsavel') {
+      value = maskTelefone(value);
+    }
+
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const validateForm = () => {
+    if (!form.nome.trim()) {
+      setError('Nome é obrigatório');
+      return false;
+    }
+    if (!form.documento.trim()) {
+      setError(form.tipo === 'cliente' ? 'CNPJ é obrigatório' : 'CPF é obrigatório');
+      return false;
+    }
+    // Pode adicionar validação mais robusta de CPF/CNPJ aqui
+    setError('');
+    return true;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!user) return;
-    const docRef = doc(db, "users", user.uid);
-    await updateDoc(docRef, { ...form, perfilCompleto: true });
-    router.push("/dashboard");
-  }
+    if (!validateForm()) return;
 
-  if (loading || !user) return <p>Carregando...</p>;
+    setSaving(true);
+
+    try {
+      const { doc, setDoc } = await import('firebase/firestore');
+      const { db } = await import('../../firebase/config');
+
+
+      await setDoc(doc(db, 'users', user.uid), {
+        nome: form.nome,
+        tipo: form.tipo,
+        documento: form.documento,
+        telefone: form.telefone,
+        endereco: {
+          rua: form.rua,
+          numero: form.numero,
+          cidade: form.cidade,
+          estado: form.estado,
+          pais: form.pais,
+        },
+        responsavel: form.responsavel,
+        contatoResponsavel: form.contatoResponsavel,
+      });
+
+      router.push('/dashboard');
+    } catch (err) {
+      setError('Erro ao salvar dados. Tente novamente.');
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
-    <form onSubmit={save} className={styles.formContainer}>
-      <h2>Complete seu perfil</h2>
+    <main className={styles.container}>
+      <h1>Complete seu perfil</h1>
 
-      <input name="empresa" placeholder="Empresa" value={form.empresa} onChange={handleChange} required className={styles.input} />
-      <input name="cnpjCpf" placeholder="CNPJ ou CPF" value={form.cnpjCpf} onChange={handleChange} required className={styles.input} />
-      <input name="telefone" placeholder="Telefone" value={form.telefone} onChange={handleChange} required className={styles.input} />
-      <input name="rua" placeholder="Rua" value={form.rua} onChange={handleChange} required className={styles.input} />
-      <input name="numero" placeholder="Número" value={form.numero} onChange={handleChange} required className={styles.input} />
-      <input name="cidade" placeholder="Cidade" value={form.cidade} onChange={handleChange} required className={styles.input} />
-      <input name="estado" placeholder="Estado" value={form.estado} onChange={handleChange} required className={styles.input} />
-      <input name="pais" placeholder="País" value={form.pais} onChange={handleChange} required className={styles.input} />
-      <input name="cep" placeholder="CEP" value={form.cep} onChange={handleChange} required className={styles.input} />
-      <input name="responsavel" placeholder="Responsável" value={form.responsavel} onChange={handleChange} required className={styles.input} />
-      <input name="contatoResponsavel" placeholder="Contato do responsável" value={form.contatoResponsavel} onChange={handleChange} required className={styles.input} />
-      <input name="email" placeholder="Email" value={form.email} onChange={handleChange} required className={styles.input} />
+      {error && <div className={styles.error}>{error}</div>}
 
+      <form onSubmit={handleSubmit} className={styles.form}>
+        <label>
+          Nome completo*
+          <input
+            type="text"
+            name="nome"
+            value={form.nome}
+            onChange={handleChange}
+            required
+          />
+        </label>
 
-      <button type="submit" className={styles.button}>Salvar</button>
-    </form>
+        <label>
+          Tipo de usuário*
+          <select name="tipo" value={form.tipo} onChange={handleChange}>
+            <option value="cliente">Cliente</option>
+            <option value="motoboy">Motoboy</option>
+          </select>
+        </label>
+
+        <label>
+          {form.tipo === 'cliente' ? 'CNPJ*' : 'CPF*'}
+          <input
+            type="text"
+            name="documento"
+            value={form.documento}
+            onChange={handleChange}
+            maxLength={form.tipo === 'cliente' ? 18 : 14}
+            required
+          />
+        </label>
+
+        <label>
+          Telefone
+          <input
+            type="tel"
+            name="telefone"
+            value={form.telefone}
+            onChange={handleChange}
+          />
+        </label>
+
+        <fieldset className={styles.fieldset}>
+          <legend>Endereço</legend>
+
+          <label>
+            Rua
+            <input
+              type="text"
+              name="rua"
+              value={form.rua}
+              onChange={handleChange}
+            />
+          </label>
+
+          <label>
+            Número
+            <input
+              type="text"
+              name="numero"
+              value={form.numero}
+              onChange={handleChange}
+            />
+          </label>
+
+          <label>
+            Cidade
+            <input
+              type="text"
+              name="cidade"
+              value={form.cidade}
+              onChange={handleChange}
+            />
+          </label>
+
+          <label>
+            Estado
+            <input
+              type="text"
+              name="estado"
+              value={form.estado}
+              onChange={handleChange}
+            />
+          </label>
+
+          <label>
+            País
+            <input
+              type="text"
+              name="pais"
+              value={form.pais}
+              onChange={handleChange}
+            />
+          </label>
+        </fieldset>
+
+        <label>
+          Responsável
+          <input
+            type="text"
+            name="responsavel"
+            value={form.responsavel}
+            onChange={handleChange}
+          />
+        </label>
+
+        <label>
+          Contato do responsável
+          <input
+            type="tel"
+            name="contatoResponsavel"
+            value={form.contatoResponsavel}
+            onChange={handleChange}
+          />
+        </label>
+
+        <button type="submit" disabled={saving}>
+          {saving ? 'Salvando...' : 'Salvar perfil'}
+        </button>
+      </form>
+    </main>
   );
 }

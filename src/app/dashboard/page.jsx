@@ -1,44 +1,47 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useAuth } from "@/context/AuthProvider";
-import { useRouter } from "next/navigation";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/firebase/firebaseClient";
-import styles from "./dashboard.module.css";
+import { useEffect } from 'react';
+import { useAuth } from '../../context/AuthProvider';
+import { useRouter } from 'next/navigation';
+import styles from './dashboard.module.css';
 
-export default function DashboardPage() {
-  const { user, loading } = useAuth();
+export default function Dashboard() {
+  const { user, profile, loading, logout } = useAuth();
   const router = useRouter();
-  const [perfil, setPerfil] = useState(null);
 
   useEffect(() => {
-    if (!loading && !user) router.push("/login");
-  }, [user, loading]);
-
-  useEffect(() => {
-    async function fetchPerfil() {
-      if (!user) return;
-      const docRef = doc(db, "users", user.uid);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        if (!data.perfilCompleto) router.push("/completar-perfil");
-        else setPerfil(data);
+    if (!loading) {
+      if (!user) {
+        router.push('/login');
+      } else if (!profile) {
+        router.push('/completar-perfil');
       }
     }
-    fetchPerfil();
-  }, [user]);
+  }, [loading, user, profile, router]);
 
-  if (loading || !perfil) return <p>Carregando...</p>;
+  if (loading || !profile) {
+    return (
+      <main className={styles.container}>
+        <p>Carregando seu dashboard...</p>
+      </main>
+    );
+  }
 
   return (
-    <main className={styles.main}>
-      <h1>Bem-vindo, {perfil.name}!</h1>
-      <p>Empresa: {perfil.empresa || "não informada"}</p>
-      <p>Função: {perfil.role}</p>
-      <button className={styles.button} onClick={() => router.push("/completar-perfil")}>Editar Perfil</button>
-      <button className={styles.logout} onClick={() => auth.signOut().then(() => router.push("/login"))}>Sair</button>
+    <main className={styles.container}>
+      <h1>Bem-vindo, {profile.nome}!</h1>
+      <p>
+        Tipo: {profile.tipo.charAt(0).toUpperCase() + profile.tipo.slice(1)}
+      </p>
+
+      <div className={styles.buttons}>
+        <button onClick={() => router.push('/completar-perfil')}>
+          Editar Perfil
+        </button>
+        <button onClick={logout} className={styles.logoutButton}>
+          Sair
+        </button>
+      </div>
     </main>
   );
 }

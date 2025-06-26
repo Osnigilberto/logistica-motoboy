@@ -1,0 +1,18 @@
+.button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid #ccc;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  background-color: white;
+  font-weight: 500;
+  font-family: inherit;
+  font-size: 1rem;
+  transition: background-color 0.2s ease;
+}
+
+.button:hover {
+  background-color: #f0f0f0;
+}
