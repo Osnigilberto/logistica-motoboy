@@ -1,4 +1,3 @@
-// Admin SDK para rodar no backend (API routes)
 import admin from "firebase-admin";
 
 if (!admin.apps.length) {
@@ -11,7 +10,7 @@ if (!admin.apps.length) {
   });
 }
 
-const adminAuth = admin.auth();
-const adminDb = admin.firestore();
+const auth = admin.auth();
+const db = admin.firestore();
 
-export { adminAuth, adminDb };
+export { auth, db };

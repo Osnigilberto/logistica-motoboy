@@ -14,7 +14,7 @@ export async function POST(req) {
         empresa: data.empresa,
         cnpjCpf: data.cnpjCpf,
         telefone: data.telefone,
-        endereco: data.endereco, // objeto com rua, numero, cidade, estado, pais
+        endereco: data.endereco, // objeto com rua, número, cidade, estado, país
         responsavel: data.responsavel,
         perfilCompleto: true,
       },
