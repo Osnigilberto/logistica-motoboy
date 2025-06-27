@@ -1,16 +1,15 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import { 
-  getAuth, 
-  GoogleAuthProvider, 
-  signInWithPopup, 
-  signOut, 
-  onAuthStateChanged 
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged
 } from 'firebase/auth';
 import { auth, db } from '../firebase/config';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-
+import { doc, getDoc } from 'firebase/firestore';
 
 const AuthContext = createContext();
 
@@ -24,11 +23,9 @@ export function AuthProvider({ children }) {
     try {
       const result = await signInWithPopup(auth, provider);
       const userData = result.user;
-      // Check if profile exists
       const docRef = doc(db, 'users', userData.uid);
       const docSnap = await getDoc(docRef);
       if (!docSnap.exists()) {
-        // Redirect to completar-perfil if no profile
         window.location.href = '/completar-perfil';
       } else {
         window.location.href = '/dashboard';
@@ -45,30 +42,34 @@ export function AuthProvider({ children }) {
     window.location.href = '/';
   };
 
+  const fetchProfile = async (uid) => {
+    const docRef = doc(db, 'users', uid);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      setProfile(docSnap.data());
+    } else {
+      setProfile(null);
+    }
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser);
-        // Fetch profile from Firestore
-        const docRef = doc(db, 'users', firebaseUser.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setProfile(docSnap.data());
-        } else {
-          setProfile(null);
-        }
+        await fetchProfile(firebaseUser.uid);
       } else {
         setUser(null);
         setProfile(null);
       }
       setLoading(false);
     });
+
     return () => unsubscribe();
   }, []);
 
   return (
     <AuthContext.Provider
-      value={{ user, profile, loading, signInWithGoogle, logout }}
+      value={{ user, profile, loading, signInWithGoogle, logout, fetchProfile }}
     >
       {children}
     </AuthContext.Provider>
