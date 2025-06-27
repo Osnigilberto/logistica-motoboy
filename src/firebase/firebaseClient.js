@@ -1,4 +1,3 @@
-// src/firebase/firebaseClient.js
 import { initializeApp, getApps } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
@@ -12,14 +11,14 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
+// Coloque o log aqui, logo após definir a config:
+console.log("Firebase authDomain:", firebaseConfig.authDomain);
+
 // Evita múltiplas inicializações
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0];
 
 // Instâncias que vamos exportar
 const auth = getAuth(app);
 const db = getFirestore(app);
-
-// DEBUG temporário para garantir variáveis
-console.log("Firebase authDomain:", firebaseConfig.authDomain);
 
 export { auth, db };
