@@ -19,21 +19,26 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   const signInWithGoogle = async () => {
-    const provider = new GoogleAuthProvider();
-    try {
-      const result = await signInWithPopup(auth, provider);
-      const userData = result.user;
-      const docRef = doc(db, 'users', userData.uid);
-      const docSnap = await getDoc(docRef);
-      if (!docSnap.exists()) {
-        window.location.href = '/completar-perfil';
-      } else {
-        window.location.href = '/dashboard';
-      }
-    } catch (error) {
-      console.error('Erro no login com Google:', error);
+  const provider = new GoogleAuthProvider();
+  try {
+    // DEBUG 🔍
+    console.log("🔥 Firebase AuthDomain atual:", auth.config.authDomain);
+    console.log("🌐 Location hostname:", window.location.hostname);
+
+    const result = await signInWithPopup(auth, provider);
+    const userData = result.user;
+    const docRef = doc(db, 'users', userData.uid);
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists()) {
+      window.location.href = '/completar-perfil';
+    } else {
+      window.location.href = '/dashboard';
     }
-  };
+  } catch (error) {
+    console.error('❌ Erro no login com Google:', error);
+  }
+};
+
 
   const logout = async () => {
     await signOut(auth);
