@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '../../../context/AuthProvider';
 import { useRouter } from 'next/navigation';
-import { db } from '../../../firebase/config';
+import { db } from '../../../firebase/firebaseClient';
 import styles from './novaEntrega.module.css';
 
 export default function NovaEntrega() {

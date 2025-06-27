@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../../context/AuthProvider';
 import { useRouter } from 'next/navigation';
 import { collection, query, where, onSnapshot, getDoc, doc } from 'firebase/firestore';
-import { db } from '../../../firebase/config';
+import { db } from '../../../firebase/firebaseClient';
 import styles from './motoboys.module.css';
 
 export default function Motoboys() {

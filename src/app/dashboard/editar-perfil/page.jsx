@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { auth, db } from "@/firebase/config";
+import { auth, db } from "@/firebase/firebaseClient";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import styles from "../../completar-perfil/completarPerfil.module.css";

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { useAuth } from '../../../context/AuthProvider';
-import { db } from '../../../firebase/config';
+import { db } from '../../../firebase/firebaseClient';
 import { useRouter } from 'next/navigation';
 import styles from './historico.module.css';
 

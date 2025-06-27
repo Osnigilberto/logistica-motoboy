@@ -100,7 +100,7 @@ export default function CompletarPerfil() {
 
     try {
       const { doc, setDoc } = await import('firebase/firestore');
-      const { db } = await import('../../firebase/config');
+      const { db } = await import('../../firebase/firebaseClient');
 
       await setDoc(doc(db, 'users', user.uid), {
         nome: form.nome,
