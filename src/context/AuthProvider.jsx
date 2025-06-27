@@ -22,8 +22,9 @@ export function AuthProvider({ children }) {
   const provider = new GoogleAuthProvider();
   try {
     // DEBUG 🔍
-    console.log("🔥 Firebase AuthDomain atual:", auth.config.authDomain);
+    console.log("🔥 Firebase AuthDomain atual:", auth.app.options.authDomain);
     console.log("🌐 Location hostname:", window.location.hostname);
+
 
     const result = await signInWithPopup(auth, provider);
     const userData = result.user;
