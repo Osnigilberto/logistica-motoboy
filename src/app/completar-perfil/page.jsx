@@ -25,75 +25,68 @@ export default function CompletarPerfil() {
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
 
-  // Máscaras simples
+  useEffect(() => {
+    if (!loading && user && profile) {
+      setForm({
+        nome: profile.nome || '',
+        tipo: profile.tipo || 'cliente',
+        documento: profile.documento || '',
+        telefone: profile.telefone || '',
+        rua: profile.endereco?.rua || '',
+        numero: profile.endereco?.numero || '',
+        cidade: profile.endereco?.cidade || '',
+        estado: profile.endereco?.estado || '',
+        pais: profile.endereco?.pais || '',
+        responsavel: profile.responsavel || '',
+        contatoResponsavel: profile.contatoResponsavel || '',
+      });
+    }
+  }, [loading, user, profile]);
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [loading, user, router]);
+
   const maskDocumento = (value) => {
-    // Remove tudo que não for número
     let v = value.replace(/\D/g, '');
     if (form.tipo === 'cliente') {
-      // CNPJ: 00.000.000/0000-00
       v = v
         .replace(/^(\d{2})(\d)/, '$1.$2')
         .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
         .replace(/\.(\d{3})(\d)/, '.$1/$2')
         .replace(/(\d{4})(\d)/, '$1-$2');
-      v = v.slice(0, 18);
+      return v.slice(0, 18);
     } else {
-      // CPF: 000.000.000-00
       v = v
         .replace(/^(\d{3})(\d)/, '$1.$2')
         .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
         .replace(/\.(\d{3})(\d)/, '.$1-$2');
-      v = v.slice(0, 14);
+      return v.slice(0, 14);
     }
-    return v;
   };
 
   const maskTelefone = (value) => {
     let v = value.replace(/\D/g, '');
-    if (v.length > 10) {
-      // (00) 00000-0000
-      v = v.replace(/^(\d{2})(\d{5})(\d{4}).*/, '($1) $2-$3');
-    } else {
-      // (00) 0000-0000
-      v = v.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
-    }
-    return v;
+    return v.length > 10
+      ? v.replace(/^(\d{2})(\d{5})(\d{4}).*/, '($1) $2-$3')
+      : v.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
   };
-
-  useEffect(() => {
-    if (!loading) {
-      if (!user) {
-        router.push('/login');
-      } else if (profile) {
-        router.push('/dashboard');
-      }
-    }
-  }, [loading, user, profile, router]);
 
   const handleChange = (e) => {
     let { name, value } = e.target;
-
-    if (name === 'documento') {
-      value = maskDocumento(value);
-    } else if (name === 'telefone' || name === 'contatoResponsavel') {
-      value = maskTelefone(value);
-    }
-
+    if (name === 'documento') value = maskDocumento(value);
+    if (name === 'telefone' || name === 'contatoResponsavel') value = maskTelefone(value);
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const validateForm = () => {
-    if (!form.nome.trim()) {
-      setError('Nome é obrigatório');
-      return false;
-    }
-    if (!form.documento.trim()) {
-      setError(form.tipo === 'cliente' ? 'CNPJ é obrigatório' : 'CPF é obrigatório');
-      return false;
-    }
-    // Pode adicionar validação mais robusta de CPF/CNPJ aqui
-    setError('');
+    if (!form.nome.trim()) return setError('Nome é obrigatório'), false;
+    if (!form.documento.trim())
+      return setError(form.tipo === 'cliente' ? 'CNPJ é obrigatório' : 'CPF é obrigatório'), false;
     return true;
   };
 
@@ -102,11 +95,12 @@ export default function CompletarPerfil() {
     if (!validateForm()) return;
 
     setSaving(true);
+    setError('');
+    setSuccess(false);
 
     try {
       const { doc, setDoc } = await import('firebase/firestore');
       const { db } = await import('../../firebase/config');
-
 
       await setDoc(doc(db, 'users', user.uid), {
         nome: form.nome,
@@ -124,138 +118,80 @@ export default function CompletarPerfil() {
         contatoResponsavel: form.contatoResponsavel,
       });
 
-      router.push('/dashboard');
+      setSuccess(true);
+      setTimeout(() => {
+        setSuccess(false);
+        router.push('/dashboard');
+      }, 1800);
     } catch (err) {
-      setError('Erro ao salvar dados. Tente novamente.');
+      setError('Erro ao salvar os dados. Tente novamente.');
       console.error(err);
     } finally {
       setSaving(false);
     }
   };
 
+  if (loading || !user) {
+    return (
+      <main className={styles.spinnerWrapper}>
+        <div className={styles.spinner} />
+        <p>Carregando...</p>
+      </main>
+    );
+  }
+
   return (
     <main className={styles.container}>
-      <h1>Complete seu perfil</h1>
+      <h1 className={styles.h1}>Complete seu perfil</h1>
 
       {error && <div className={styles.error}>{error}</div>}
+      {success && <div className={styles.success}>Perfil salvo com sucesso!</div>}
 
       <form onSubmit={handleSubmit} className={styles.form}>
-        <label>
+        <label className={styles.label}>
           Nome completo*
-          <input
-            type="text"
-            name="nome"
-            value={form.nome}
-            onChange={handleChange}
-            required
-          />
+          <input className={styles.input} name="nome" value={form.nome} onChange={handleChange} required />
         </label>
 
-        <label>
+        <label className={styles.label}>
           Tipo de usuário*
-          <select name="tipo" value={form.tipo} onChange={handleChange}>
+          <select className={styles.select} name="tipo" value={form.tipo} onChange={handleChange}>
             <option value="cliente">Cliente</option>
             <option value="motoboy">Motoboy</option>
           </select>
         </label>
 
-        <label>
+        <label className={styles.label}>
           {form.tipo === 'cliente' ? 'CNPJ*' : 'CPF*'}
-          <input
-            type="text"
-            name="documento"
-            value={form.documento}
-            onChange={handleChange}
-            maxLength={form.tipo === 'cliente' ? 18 : 14}
-            required
-          />
+          <input className={styles.input} name="documento" value={form.documento} onChange={handleChange} required />
         </label>
 
-        <label>
+        <label className={styles.label}>
           Telefone
-          <input
-            type="tel"
-            name="telefone"
-            value={form.telefone}
-            onChange={handleChange}
-          />
+          <input className={styles.input} name="telefone" value={form.telefone} onChange={handleChange} />
         </label>
 
         <fieldset className={styles.fieldset}>
-          <legend>Endereço</legend>
-
-          <label>
-            Rua
-            <input
-              type="text"
-              name="rua"
-              value={form.rua}
-              onChange={handleChange}
-            />
-          </label>
-
-          <label>
-            Número
-            <input
-              type="text"
-              name="numero"
-              value={form.numero}
-              onChange={handleChange}
-            />
-          </label>
-
-          <label>
-            Cidade
-            <input
-              type="text"
-              name="cidade"
-              value={form.cidade}
-              onChange={handleChange}
-            />
-          </label>
-
-          <label>
-            Estado
-            <input
-              type="text"
-              name="estado"
-              value={form.estado}
-              onChange={handleChange}
-            />
-          </label>
-
-          <label>
-            País
-            <input
-              type="text"
-              name="pais"
-              value={form.pais}
-              onChange={handleChange}
-            />
-          </label>
+          <legend className={styles.legend}>Endereço</legend>
+          {['rua', 'numero', 'cidade', 'estado', 'pais'].map((field) => (
+            <label key={field} className={styles.label}>
+              {field.charAt(0).toUpperCase() + field.slice(1)}
+              <input className={styles.input} name={field} value={form[field]} onChange={handleChange} />
+            </label>
+          ))}
         </fieldset>
 
-        <label>
+        <label className={styles.label}>
           Responsável
-          <input
-            type="text"
-            name="responsavel"
-            value={form.responsavel}
-            onChange={handleChange}
-          />
+          <input className={styles.input} name="responsavel" value={form.responsavel} onChange={handleChange} />
         </label>
 
-        <label>
+        <label className={styles.label}>
           Contato do responsável
-          <input
-            type="tel"
-            name="contatoResponsavel"
-            value={form.contatoResponsavel}
-            onChange={handleChange}
-          />
+          <input className={styles.input} name="contatoResponsavel" value={form.contatoResponsavel} onChange={handleChange} />
         </label>
 
-        <button type="submit" disabled={saving}>
+        <button className={styles.button} type="submit" disabled={saving}>
           {saving ? 'Salvando...' : 'Salvar perfil'}
         </button>
       </form>

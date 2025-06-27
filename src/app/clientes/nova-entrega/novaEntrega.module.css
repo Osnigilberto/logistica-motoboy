@@ -1,0 +1,118 @@
+.container {
+  max-width: 600px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: #fdf6ec;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(160, 136, 127, 0.25);
+  font-family: 'Inter', sans-serif;
+  color: #4e342e;
+}
+
+.title {
+  font-weight: 700;
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  text-align: center;
+  color: #6d4c41;
+}
+
+.error {
+  color: #a94442;
+  background-color: #fdecea;
+  border: 1px solid #f5c6cb;
+  padding: 0.8rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.label {
+  font-weight: 600;
+  font-size: 1rem;
+  color: #5d4037;
+  display: flex;
+  flex-direction: column;
+}
+
+.input,
+.textarea {
+  margin-top: 0.4rem;
+  padding: 0.7rem 1rem;
+  border: 1px solid #ccbba4;
+  border-radius: 6px;
+  background-color: #fffefb;
+  font-size: 1rem;
+  color: #3e2723;
+  transition: border-color 0.3s ease;
+  font-family: 'Inter', sans-serif;
+}
+
+.input:focus,
+.textarea:focus {
+  border-color: #ca6c3d;
+  outline: none;
+  box-shadow: 0 0 6px rgba(202, 108, 61, 0.5);
+}
+
+.textarea {
+  resize: vertical;
+}
+
+.buttons {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.buttonPrimary,
+.buttonSecondary {
+  flex: 1;
+  padding: 0.85rem 1rem;
+  font-weight: 700;
+  font-size: 1rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: background-color 0.3s ease;
+  color: white;
+  box-shadow: 0 2px 8px rgba(161, 134, 127, 0.4);
+}
+
+.buttonPrimary {
+  background-color: #ca6c3d;
+}
+
+.buttonPrimary:hover:not(:disabled) {
+  background-color: #b2592e;
+  box-shadow: 0 4px 14px rgba(178, 89, 46, 0.6);
+}
+
+.buttonPrimary:disabled {
+  background-color: #e0cfc7;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.buttonSecondary {
+  background-color: #8d6e63;
+}
+
+.buttonSecondary:hover:not(:disabled) {
+  background-color: #735844;
+  box-shadow: 0 4px 14px rgba(115, 88, 68, 0.6);
+}
+
+.buttonSecondary:disabled {
+  background-color: #c4b7ac;
+  cursor: not-allowed;
+  box-shadow: none;
+}
