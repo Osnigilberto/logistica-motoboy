@@ -1,5 +1,5 @@
 // src/firebase/auth.js
-import { auth } from "./config";
+import { auth } from "./firebaseClient";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 
 /**
