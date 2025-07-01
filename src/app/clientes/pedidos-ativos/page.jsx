@@ -22,26 +22,34 @@ export default function PedidosAtivos() {
 
     if (user) {
       const q = query(
-        collection(db, 'entregas'),
+        collection(db, 'pedidos'),
         where('clientId', '==', user.uid),
         where('status', '==', 'ativo')
       );
 
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const pedidosData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setPedidos(pedidosData);
-        setLoadingData(false);
-      }, (error) => {
-        console.error('Erro ao buscar pedidos ativos:', error);
-        setLoadingData(false);
-      });
+      const unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          const pedidosData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setPedidos(pedidosData);
+          setLoadingData(false);
+        },
+        (error) => {
+          console.error('Erro ao buscar pedidos ativos:', error);
+          setLoadingData(false);
+        }
+      );
 
       return () => unsubscribe();
     }
   }, [user, loading, router]);
 
   if (loading || loadingData) {
-    return <main className={styles.container}><p>Carregando pedidos ativos...</p></main>;
+    return (
+      <main className={styles.container}>
+        <p>Carregando pedidos ativos...</p>
+      </main>
+    );
   }
 
   return (
@@ -51,16 +59,23 @@ export default function PedidosAtivos() {
       <ul className={styles.list}>
         {pedidos.map(pedido => (
           <li key={pedido.id} className={styles.item}>
-            <p><strong>Origem:</strong> {pedido.origem}</p>
-            <p><strong>Destino:</strong> {pedido.destino}</p>
-            <p><strong>Status:</strong> {pedido.status}</p>
-            <p><strong>Data Entrega:</strong> {pedido.dataEntrega?.toDate().toLocaleString()}</p>
+            <p><strong>Origem:</strong> {pedido.origem || '-'}</p>
+            <p><strong>Destino:</strong> {pedido.destino || '-'}</p>
+            <p><strong>Status:</strong> {pedido.status || '-'}</p>
+            <p>
+              <strong>Data Entrega:</strong>{' '}
+              {pedido.dataEntrega?.toDate
+                ? pedido.dataEntrega.toDate().toLocaleString()
+                : pedido.dataEntrega
+                ? new Date(pedido.dataEntrega).toLocaleString()
+                : '-'}
+            </p>
             <p><strong>Descrição:</strong> {pedido.descricao || '—'}</p>
           </li>
         ))}
       </ul>
-      <button className={styles.button} onClick={() => router.back()}>
-        Voltar
+      <button className={styles.button} onClick={() => router.push('/dashboard')}>
+        Voltar ao dashboard
       </button>
     </main>
   );

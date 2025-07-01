@@ -55,3 +55,97 @@
 .button:hover {
   background-color: #b2592e;
 }
+
+/* Vincular motoboy */
+.vincularContainer {
+  margin-bottom: 20px;
+  display: flex;
+  gap: 10px;
+}
+
+.inputEmail {
+  flex-grow: 1;
+  padding: 8px 12px;
+  border: 1px solid #ca6c3d;
+  border-radius: 8px;
+  font-size: 1rem;
+  color: #4e342e;
+  background-color: #fff8f0;
+  transition: border-color 0.3s ease;
+}
+
+.inputEmail:focus {
+  border-color: #b2592e;
+  outline: none;
+}
+
+.error {
+  color: #c53030;
+  margin-top: 8px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.success {
+  color: #2f855a;
+  margin-top: 8px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.removeButton {
+  margin-top: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: #d32f2f;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+}
+
+.removeButton:hover {
+  background-color: #b71c1c;
+}
+
+
+/* Spinner botão vincular */
+.spinner {
+  border: 3px solid #f3f3f3; /* Light grey */
+  border-top: 3px solid #b2592e; /* Brownish */
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+  display: block;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Loading Skeleton */
+.skeleton {
+  height: 80px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #f0e6dc 25%, #e3d6c7 37%, #f0e6dc 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+  margin-bottom: 12px;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}

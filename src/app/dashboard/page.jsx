@@ -3,21 +3,124 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthProvider';
 import { useRouter } from 'next/navigation';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts';
+import DashboardLayout from '../components/DashboardLayout';
 import styles from './dashboard.module.css';
+import { db } from '../../firebase/firebaseClient';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A28BFE'];
 
 export default function Dashboard() {
-  const { user, profile, loading, logout } = useAuth();
+  const { user, profile, loading } = useAuth();
   const router = useRouter();
+
   const [loadingData, setLoadingData] = useState(true);
   const [isAvailable, setIsAvailable] = useState(true);
 
+  const [entregasStatusData, setEntregasStatusData] = useState([]);
+  const [ultimasEntregas, setUltimasEntregas] = useState([]);
+  const [motoboysAtivosCount, setMotoboysAtivosCount] = useState(0);
+
+  // Busca entregas para cliente ou motoboy
+  async function fetchEntregasPorUsuario(uid, tipo) {
+    const entregasRef = collection(db, 'entregas');
+    let q;
+
+    if (tipo === 'cliente') {
+      q = query(entregasRef, where('clienteId', '==', uid));
+    } else if (tipo === 'motoboy') {
+      q = query(entregasRef, where('motoboyID', '==', uid)); // note maiúsculo ID
+    } else {
+      q = query(entregasRef, where('clienteId', '==', uid));
+    }
+
+    const snapshot = await getDocs(q);
+    const entregas = [];
+    snapshot.forEach((doc) => {
+      entregas.push({ id: doc.id, ...doc.data() });
+    });
+    return entregas;
+  }
+
+  // Busca quantidade de motoboys ativos vinculados ao cliente
+  async function fetchMotoboysAtivos(clienteUid) {
+    const vinculosRef = collection(db, 'vinculos');
+    const q = query(
+      vinculosRef,
+      where('clienteId', '==', clienteUid),
+      where('status', '==', 'ativo')
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.size;
+  }
+
+  // Agrupa entregas por status para gráfico PieChart
+  function agruparPorStatus(entregas) {
+    const statusCount = {};
+    entregas.forEach((entrega) => {
+      const status = entrega.status || 'Indefinido';
+      statusCount[status] = (statusCount[status] || 0) + 1;
+    });
+
+    return Object.entries(statusCount).map(([name, value]) => ({ name, value }));
+  }
+
+  // Pega últimas entregas ordenadas por dataCriacao
+  function pegarUltimasEntregas(entregas, limite = 5) {
+    return entregas
+      .sort((a, b) => new Date(b.dataCriacao) - new Date(a.dataCriacao))
+      .slice(0, limite);
+  }
+
   useEffect(() => {
-    if (!loading) {
-      if (!user) router.push('/login');
-      else if (!profile) router.push('/completar-perfil');
-      else setTimeout(() => setLoadingData(false), 800);
+    if (!loading && user && profile) {
+      async function carregarDados() {
+        setLoadingData(true);
+        try {
+          const entregas = await fetchEntregasPorUsuario(user.uid, profile.tipo);
+          setEntregasStatusData(agruparPorStatus(entregas));
+          setUltimasEntregas(pegarUltimasEntregas(entregas));
+
+          if (profile.tipo === 'cliente') {
+            const count = await fetchMotoboysAtivos(user.uid);
+            setMotoboysAtivosCount(count);
+          } else {
+            setMotoboysAtivosCount(0);
+          }
+        } catch (error) {
+          console.error('Erro ao carregar entregas:', error);
+          setEntregasStatusData([{ name: 'Erro ao carregar', value: 1 }]);
+          setUltimasEntregas([]);
+          setMotoboysAtivosCount(0);
+        }
+        setLoadingData(false);
+      }
+      carregarDados();
+    } else if (!loading && !user) {
+      router.push('/login');
+    } else if (!loading && user && !profile) {
+      router.push('/completar-perfil');
     }
   }, [loading, user, profile, router]);
+
+  const isCliente = profile?.tipo === 'cliente';
+  const userType = profile?.tipo || 'cliente';
+
+  const toggleAvailability = () => {
+    setIsAvailable((prev) => !prev);
+  };
 
   if (loading || loadingData) {
     return (
@@ -28,108 +131,140 @@ export default function Dashboard() {
     );
   }
 
-  const isCliente = profile.tipo === 'cliente';
-
-  const toggleAvailability = () => {
-    setIsAvailable((prev) => !prev);
-  };
-
   return (
-    <main className={styles.container}>
+    <DashboardLayout userType={userType}>
       <h1 className={styles.title}>
-        Bem-vindo(a), {isCliente ? (profile.nomeEmpresa || profile.nome) : profile.nome}
+        Bem-vindo(a), {isCliente ? profile.nomeEmpresa || profile.nome : profile.nome}
       </h1>
       <p className={styles.subtext}>Usuário: {profile.tipo}</p>
 
-      <section className={styles.dashboardSection}>
-        <div className={styles.card}>
-          <h3>Entregas atuais</h3>
-          <p>Você não tem entregas em andamento.</p>
+      {/* KPIs */}
+      <section className={styles.kpiSection}>
+        <div className={styles.kpiCard}>
+          <h3>Entregas em andamento</h3>
+          <p>
+            {
+              entregasStatusData.find((s) =>
+                s.name.toLowerCase().includes('andamento')
+              )?.value || 0
+            }
+          </p>
         </div>
-
-        {isCliente ? (
-          <>
-            <div className={styles.card}>
-              <h3>Pedidos Ativos</h3>
-              <button
-                className={styles.cardButton}
-                onClick={() => router.push('/clientes/pedidos-ativos')}
-              >
-                Ver pedidos ativos
-              </button>
-            </div>
-            <div className={styles.card}>
-              <h3>Nova Entrega</h3>
-              <button
-                className={styles.cardButton}
-                onClick={() => router.push('/clientes/nova-entrega')}
-              >
-                Solicitar entrega
-              </button>
-            </div>
-            <div className={styles.card}>
-              <h3>Histórico</h3>
-              <button
-                className={styles.cardButton}
-                onClick={() => router.push('/clientes/historico')}
-              >
-                Ver histórico
-              </button>
-            </div>
-            <div className={styles.card}>
-              <h3>Motoboys</h3>
-              <button
-                className={styles.cardButton}
-                onClick={() => router.push('/clientes/motoboys')}
-              >
-                Ver motoboys
-              </button>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className={styles.card}>
-              <h3>Entregas disponíveis</h3>
-              <button
-                className={styles.cardButton}
-                onClick={() => router.push('/motoboy/entregas-disponiveis')}
-              >
-                Ver entregas disponíveis
-              </button>
-            </div>
-            <div className={styles.card}>
-              <h3>Status</h3>
-              <p>
-                Atual: <strong>{isAvailable ? 'Disponível' : 'Ocupado'}</strong>
-              </p>
-              <button className={styles.cardButton} onClick={toggleAvailability}>
-                {isAvailable ? 'Ficar ocupado' : 'Ficar disponível'}
-              </button>
-            </div>
-            <div className={styles.card}>
-              <h3>Histórico</h3>
-              <button
-                className={styles.cardButton}
-                onClick={() => router.push('/motoboy/historico')}
-              >
-                Ver histórico
-              </button>
-            </div>
-          </>
+        <div className={styles.kpiCard}>
+          <h3>Entregas atrasadas</h3>
+          <p>
+            {
+              entregasStatusData.find((s) =>
+                s.name.toLowerCase().includes('atrasada')
+              )?.value || 0
+            }
+          </p>
+        </div>
+        <div className={styles.kpiCard}>
+          <h3>Total no mês</h3>
+          <p>{ultimasEntregas.length}</p>
+        </div>
+        {isCliente && (
+          <div className={styles.kpiCard}>
+            <h3>Motoboys ativos</h3>
+            <p>{motoboysAtivosCount}</p>
+          </div>
         )}
       </section>
 
-      <section className={styles.cardsFooter}>
-        <button
-          className={`${styles.button} ${styles.editButton}`}
-          onClick={() => router.push('/completar-perfil?editar=true')}
-        >
-          Editar Perfil
-        </button>
-        <button className={`${styles.button} ${styles.logoutButton}`} onClick={logout}>
-          Sair
-        </button>
+      {/* Gráficos */}
+      <section className={styles.graphSection}>
+        <div className={styles.graphCard}>
+          <h3>Entregas por status</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <PieChart>
+              <Pie
+                data={entregasStatusData}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                outerRadius={80}
+                label
+              >
+                {entregasStatusData.map((entry, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={COLORS[index % COLORS.length]}
+                  />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend verticalAlign="bottom" height={36} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className={styles.graphCard}>
+          <h3>Entregas por dia da semana</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart
+              data={[
+                { dia: 'Seg', entregas: 3 },
+                { dia: 'Ter', entregas: 6 },
+                { dia: 'Qua', entregas: 4 },
+                { dia: 'Qui', entregas: 7 },
+                { dia: 'Sex', entregas: 5 },
+                { dia: 'Sáb', entregas: 2 },
+                { dia: 'Dom', entregas: 1 },
+              ]}
+            >
+              <XAxis dataKey="dia" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="entregas" fill="#82ca9d" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </section>
-    </main>
+
+      {/* Últimas entregas */}
+      <section className={styles.tableSection}>
+        <h3>Últimas entregas</h3>
+        {ultimasEntregas.length === 0 ? (
+          <p>Nenhuma entrega encontrada.</p>
+        ) : (
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Cliente</th>
+                <th>Status</th>
+                <th>Data</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ultimasEntregas.map((entrega) => (
+                <tr key={entrega.id}>
+                  <td>{entrega.id}</td>
+                  <td>{entrega.clienteId || 'N/D'}</td>
+                  <td>{entrega.status}</td>
+                  <td>{new Date(entrega.dataCriacao).toLocaleDateString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+
+      {/* Status do motoboy */}
+      {!isCliente && (
+        <section className={styles.statusSection}>
+          <h3>Status</h3>
+          <p>
+            Atual: <strong>{isAvailable ? 'Disponível' : 'Ocupado'}</strong>
+          </p>
+          <button className={styles.button} onClick={toggleAvailability}>
+            {isAvailable ? 'Ficar ocupado' : 'Ficar disponível'}
+          </button>
+        </section>
+      )}
+    </DashboardLayout>
   );
 }

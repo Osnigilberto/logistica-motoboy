@@ -1,0 +1,129 @@
+/* DashboardLayout.module.css */
+
+.layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f5f5f5;
+}
+
+/* Sidebar */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 240px;
+  height: 100vh;
+  background-color: #2a2a2a;
+  color: white;
+  overflow-y: auto;
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+  z-index: 1000;
+}
+
+.sidebar.open {
+  transform: translateX(0);
+}
+
+.sidebarContent {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 1rem;
+}
+
+.logoDesktop {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+/* Navegação */
+.nav {
+  flex-grow: 1;
+}
+
+.navLink {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  color: white;
+  text-decoration: none;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+  margin-bottom: 0.5rem;
+}
+
+.navLink:hover {
+  background-color: #444;
+}
+
+.logoutButton {
+  background: none;
+  border: none;
+  color: white;
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+  margin-top: auto;
+}
+
+.logoutButton:hover {
+  background-color: #b33939;
+}
+
+/* Conteúdo principal */
+.mainContent {
+  flex-grow: 1;
+  margin-left: 0;
+  padding: 1rem;
+  width: 100%;
+  transition: margin-left 0.3s ease;
+}
+
+.menuButton {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 1100;
+  background: none;
+  border: none;
+  color: #000;
+  font-size: 1.8rem;
+  cursor: pointer;
+}
+
+
+/* Overlay */
+.overlay {
+  position: fixed;
+  top: 56px; /* abaixo do header mobile */
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0,0,0,0.5);
+  z-index: 900;
+}
+
+/* Desktop layout */
+@media (min-width: 768px) {
+  .sidebar {
+    transform: translateX(0);
+    position: relative;
+  }
+  .mobileHeader {
+    display: none;
+  }
+  .mainContent {
+    margin-left: 100px;
+  }
+  .overlay {
+    display: none;
+  }
+}

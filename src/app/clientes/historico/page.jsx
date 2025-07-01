@@ -17,9 +17,9 @@ export default function Historico() {
 
   useEffect(() => {
     if (!loading && user) {
-      const entregasRef = collection(db, 'entregas');
+      const pedidosRef = collection(db, 'pedidos');
       const q = query(
-        entregasRef,
+        pedidosRef,
         where('clientId', '==', user.uid),
         where('status', 'in', ['entregue', 'cancelado']),
         orderBy('dataEntrega', 'desc')
@@ -28,7 +28,7 @@ export default function Historico() {
       const unsubscribe = onSnapshot(
         q,
         (snapshot) => {
-          const lista = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+          const lista = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           setPedidos(lista);
           setLoadingPedidos(false);
         },
@@ -64,7 +64,9 @@ export default function Historico() {
       <main className={styles.container}>
         <h1 className={styles.title}>Histórico de Entregas</h1>
         <p>Você ainda não possui entregas concluídas.</p>
-        <button className={styles.button} onClick={() => router.back()}>Voltar</button>
+        <button className={styles.button} onClick={() => router.push('/dashboard')}>
+          Voltar ao dashboard
+        </button>
       </main>
     );
   }
@@ -75,18 +77,24 @@ export default function Historico() {
       <ul className={styles.list}>
         {pedidos.map((pedido) => (
           <li key={pedido.id} className={styles.card}>
-            <p><strong>Origem:</strong> {pedido.origem}</p>
-            <p><strong>Destino:</strong> {pedido.destino}</p>
-            <p><strong>Data de Entrega:</strong> {pedido.dataEntrega?.toDate ? pedido.dataEntrega.toDate().toLocaleString() : new Date(pedido.dataEntrega).toLocaleString()}</p>
-            <p><strong>Status:</strong> {pedido.status}</p>
+            <p><strong>Origem:</strong> {pedido.origem || '-'}</p>
+            <p><strong>Destino:</strong> {pedido.destino || '-'}</p>
+            <p>
+              <strong>Data de Entrega:</strong>{' '}
+              {pedido.dataEntrega?.toDate
+                ? pedido.dataEntrega.toDate().toLocaleString()
+                : pedido.dataEntrega
+                ? new Date(pedido.dataEntrega).toLocaleString()
+                : '-'}
+            </p>
+            <p><strong>Status:</strong> {pedido.status || '-'}</p>
             <p><strong>Descrição:</strong> {pedido.descricao || '-'}</p>
           </li>
         ))}
       </ul>
-      <button className={styles.button} onClick={() => router.back()}>
-        Voltar
-        </button>
-
+      <button className={styles.button} onClick={() => router.push('/dashboard')}>
+        Voltar ao dashboard
+      </button>
     </main>
   );
 }
