@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import styles from './completarPerfil.module.css';
 
 export default function CompletarPerfil() {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, fetchProfile } = useAuth();
   const router = useRouter();
 
   const [form, setForm] = useState({
@@ -56,15 +56,13 @@ export default function CompletarPerfil() {
   const maskDocumento = (value) => {
     let v = value.replace(/\D/g, '');
     if (form.tipo === 'cliente') {
-      v = v
-        .replace(/^(\d{2})(\d)/, '$1.$2')
+      v = v.replace(/^(\d{2})(\d)/, '$1.$2')
         .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
         .replace(/\.(\d{3})(\d)/, '.$1/$2')
         .replace(/(\d{4})(\d)/, '$1-$2');
       return v.slice(0, 18);
     } else {
-      v = v
-        .replace(/^(\d{3})(\d)/, '$1.$2')
+      v = v.replace(/^(\d{3})(\d)/, '$1.$2')
         .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
         .replace(/\.(\d{3})(\d)/, '.$1-$2');
       return v.slice(0, 14);
@@ -114,6 +112,7 @@ export default function CompletarPerfil() {
       const { db } = await import('../../firebase/firebaseClient');
 
       await setDoc(doc(db, 'users', user.uid), {
+        email: user.email, // ✅ salva o e-mail
         tipo: form.tipo,
         nome: form.tipo === 'motoboy' ? form.nome : '',
         nomeEmpresa: form.tipo === 'cliente' ? form.nomeEmpresa : '',
@@ -128,13 +127,16 @@ export default function CompletarPerfil() {
         },
         responsavel: form.responsavel,
         contatoResponsavel: form.contatoResponsavel,
-      });
+        statusPerfil: 'completo', // ✅ necessário pro AuthProvider
+      }, { merge: true });
+
+      await fetchProfile(user.uid); // ✅ atualiza o contexto
 
       setSuccess(true);
       setTimeout(() => {
         setSuccess(false);
         router.push('/dashboard');
-      }, 1800);
+      }, 1200);
     } catch (err) {
       setError('Erro ao salvar os dados. Tente novamente.');
       console.error(err);
@@ -160,7 +162,6 @@ export default function CompletarPerfil() {
       {success && <div className={styles.success}>Perfil salvo com sucesso!</div>}
 
       <form onSubmit={handleSubmit} className={styles.form}>
-        {/* Campo condicional: nomeEmpresa para cliente */}
         {form.tipo === 'cliente' && (
           <label className={styles.label}>
             Nome da empresa*
@@ -175,7 +176,6 @@ export default function CompletarPerfil() {
           </label>
         )}
 
-        {/* Campo condicional: nome para motoboy */}
         {form.tipo === 'motoboy' && (
           <label className={styles.label}>
             Nome completo*
