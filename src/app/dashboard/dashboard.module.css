@@ -11,11 +11,18 @@
   margin-bottom: 0.5rem;
 }
 
-.subtext {
-  font-size: 1rem;
-  color: #666;
-  margin-bottom: 2rem;
+.badge {
+  background-color: #e0cfc7;
+  color: #5d4037;
+  padding: 0.25rem 0.5rem;
+  margin-left: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 6px;
+  vertical-align: middle;
+  text-transform: uppercase;
 }
+
 
 /* KPIs */
 .kpiSection {

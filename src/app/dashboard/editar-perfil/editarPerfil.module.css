@@ -1,4 +1,5 @@
-.container {
+/* Container do formulário */
+.formContainer {
   max-width: 600px;
   margin: 2rem auto;
   padding: 2rem;
@@ -10,7 +11,8 @@
   animation: fadeIn 0.4s ease;
 }
 
-.h1 {
+/* Título */
+.title {
   text-align: center;
   font-size: 1.8rem;
   font-weight: 700;
@@ -18,31 +20,11 @@
   margin-bottom: 1.5rem;
 }
 
-.error {
-  background-color: #fdecea;
-  border: 1px solid #f5c6cb;
-  color: #a94442;
-  padding: 0.75rem;
-  border-radius: 6px;
-  margin-bottom: 1rem;
-}
-
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-.label {
-  display: flex;
-  flex-direction: column;
-  font-weight: 500;
-  color: #5d4037;
-  font-size: 0.95rem;
-}
-
-.input, .select {
-  margin-top: 0.4rem;
+/* Inputs e selects */
+.input,
+.select {
+  width: 100%;
+  margin-top: 0.5rem;
   padding: 0.6rem 0.8rem;
   border: 1px solid #ccbba4;
   border-radius: 6px;
@@ -52,12 +34,14 @@
   transition: border-color 0.2s;
 }
 
-.input:focus, .select:focus {
+.input:focus,
+.select:focus {
   border-color: #a1887f;
   outline: none;
   box-shadow: 0 0 0 2px rgba(161, 136, 127, 0.3);
 }
 
+/* Grupo de rádio */
 .radioGroup {
   display: flex;
   justify-content: center;
@@ -82,21 +66,25 @@
 }
 
 
+/* Fieldset e legend */
 .fieldset {
   border: 1px solid #d7ccc8;
   border-radius: 8px;
   padding: 1.2rem;
-  margin-top: 1rem;
+  margin-top: 1.5rem;
 }
 
 .legend {
   font-weight: 600;
   font-size: 1rem;
   color: #6d4c41;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.7rem;
 }
 
+/* Botão principal */
 .button {
+  margin-top: 1.5rem;
+  width: 100%;
   padding: 0.75rem;
   background-color: #ca6c3d;
   color: white;
@@ -117,6 +105,21 @@
   cursor: not-allowed;
 }
 
+/* Link voltar */
+.voltar {
+  display: inline-block;
+  margin-top: 1rem;
+  color: #6d4c41;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.voltar:hover {
+  color: #ca6c3d;
+}
+
+/* Spinner loading */
 .spinnerWrapper {
   display: flex;
   flex-direction: column;
@@ -137,6 +140,7 @@
   margin-bottom: 12px;
 }
 
+/* Animações */
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -154,53 +158,10 @@
   }
 }
 
+/* Responsividade */
 @media (max-width: 600px) {
-  .container {
+  .formContainer {
     margin: 1rem;
     padding: 1.5rem;
   }
-}
-
-.skeleton {
-  background: linear-gradient(90deg, #f3ede3 25%, #ece5db 50%, #f3ede3 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.6s infinite linear;
-  border-radius: 6px;
-}
-
-.skeletonInput {
-  height: 42px;
-  width: 100%;
-  margin-top: 4px;
-}
-
-.skeletonSelect {
-  height: 44px;
-  width: 100%;
-  margin-top: 4px;
-}
-
-.skeletonButton {
-  height: 45px;
-  width: 100%;
-  margin-top: 12px;
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-.success {
-  background-color: #e6f4ea;
-  border: 1px solid #a5d6a7;
-  color: #2e7d32;
-  padding: 0.75rem;
-  border-radius: 6px;
-  margin-bottom: 1rem;
-  animation: fadeIn 0.3s ease;
 }

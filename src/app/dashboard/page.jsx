@@ -28,10 +28,10 @@ export default function Dashboard() {
 
   const [loadingData, setLoadingData] = useState(true);
   const [isAvailable, setIsAvailable] = useState(true);
-
   const [entregasStatusData, setEntregasStatusData] = useState([]);
   const [ultimasEntregas, setUltimasEntregas] = useState([]);
   const [motoboysAtivosCount, setMotoboysAtivosCount] = useState(0);
+  const [entregasPorDiaSemana, setEntregasPorDiaSemana] = useState([]);
 
   // Busca entregas para cliente ou motoboy
   async function fetchEntregasPorUsuario(uid, tipo) {
@@ -41,7 +41,7 @@ export default function Dashboard() {
     if (tipo === 'cliente') {
       q = query(entregasRef, where('clienteId', '==', uid));
     } else if (tipo === 'motoboy') {
-      q = query(entregasRef, where('motoboyID', '==', uid)); // note maiúsculo ID
+      q = query(entregasRef, where('motoboyID', '==', uid));
     } else {
       q = query(entregasRef, where('clienteId', '==', uid));
     }
@@ -54,7 +54,42 @@ export default function Dashboard() {
     return entregas;
   }
 
-  // Busca quantidade de motoboys ativos vinculados ao cliente
+  // Agrupar entregas por status para o gráfico de pizza
+  function agruparPorStatus(entregas) {
+    const statusCount = {};
+    entregas.forEach((entrega) => {
+      const status = entrega.status || 'Indefinido';
+      statusCount[status] = (statusCount[status] || 0) + 1;
+    });
+
+    return Object.entries(statusCount).map(([name, value]) => ({ name, value }));
+  }
+
+  // Agrupar entregas por dia da semana
+  function agruparPorDiaDaSemana(entregas) {
+    const dias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    const contagem = Array(7).fill(0);
+
+    entregas.forEach((entrega) => {
+      const data = new Date(entrega.dataCriacao);
+      const diaSemana = data.getDay();
+      contagem[diaSemana]++;
+    });
+
+    return dias.map((dia, index) => ({
+      dia,
+      entregas: contagem[index],
+    }));
+  }
+
+  // Pegar últimas entregas
+  function pegarUltimasEntregas(entregas, limite = 5) {
+    return entregas
+      .sort((a, b) => new Date(b.dataCriacao) - new Date(a.dataCriacao))
+      .slice(0, limite);
+  }
+
+  // Buscar motoboys ativos
   async function fetchMotoboysAtivos(clienteUid) {
     const vinculosRef = collection(db, 'vinculos');
     const q = query(
@@ -66,24 +101,6 @@ export default function Dashboard() {
     return snapshot.size;
   }
 
-  // Agrupa entregas por status para gráfico PieChart
-  function agruparPorStatus(entregas) {
-    const statusCount = {};
-    entregas.forEach((entrega) => {
-      const status = entrega.status || 'Indefinido';
-      statusCount[status] = (statusCount[status] || 0) + 1;
-    });
-
-    return Object.entries(statusCount).map(([name, value]) => ({ name, value }));
-  }
-
-  // Pega últimas entregas ordenadas por dataCriacao
-  function pegarUltimasEntregas(entregas, limite = 5) {
-    return entregas
-      .sort((a, b) => new Date(b.dataCriacao) - new Date(a.dataCriacao))
-      .slice(0, limite);
-  }
-
   useEffect(() => {
     if (!loading && user && profile) {
       async function carregarDados() {
@@ -92,6 +109,7 @@ export default function Dashboard() {
           const entregas = await fetchEntregasPorUsuario(user.uid, profile.tipo);
           setEntregasStatusData(agruparPorStatus(entregas));
           setUltimasEntregas(pegarUltimasEntregas(entregas));
+          setEntregasPorDiaSemana(agruparPorDiaDaSemana(entregas));
 
           if (profile.tipo === 'cliente') {
             const count = await fetchMotoboysAtivos(user.uid);
@@ -134,9 +152,16 @@ export default function Dashboard() {
   return (
     <DashboardLayout userType={userType}>
       <h1 className={styles.title}>
-        Bem-vindo(a), {isCliente ? profile.nomeEmpresa || profile.nome : profile.nome}
+        Bem-vindo(a),{' '}
+        {isCliente
+          ? profile.nomeEmpresa?.trim() || 'Sua empresa'
+          : profile.nome?.trim() || 'Motoboy'}
+        <span className={styles.badge}>
+          {isCliente ? 'Cliente' : 'Motoboy'}
+        </span>
       </h1>
-      <p className={styles.subtext}>Usuário: {profile.tipo}</p>
+
+
 
       {/* KPIs */}
       <section className={styles.kpiSection}>
@@ -203,17 +228,7 @@ export default function Dashboard() {
         <div className={styles.graphCard}>
           <h3>Entregas por dia da semana</h3>
           <ResponsiveContainer width="100%" height={250}>
-            <BarChart
-              data={[
-                { dia: 'Seg', entregas: 3 },
-                { dia: 'Ter', entregas: 6 },
-                { dia: 'Qua', entregas: 4 },
-                { dia: 'Qui', entregas: 7 },
-                { dia: 'Sex', entregas: 5 },
-                { dia: 'Sáb', entregas: 2 },
-                { dia: 'Dom', entregas: 1 },
-              ]}
-            >
+            <BarChart data={entregasPorDiaSemana}>
               <XAxis dataKey="dia" />
               <YAxis />
               <Tooltip />

@@ -11,6 +11,7 @@ export default function CompletarPerfil() {
 
   const [form, setForm] = useState({
     nome: '',
+    nomeEmpresa: '',
     tipo: 'cliente',
     documento: '',
     telefone: '',
@@ -31,6 +32,7 @@ export default function CompletarPerfil() {
     if (!loading && user && profile) {
       setForm({
         nome: profile.nome || '',
+        nomeEmpresa: profile.nomeEmpresa || '',
         tipo: profile.tipo || 'cliente',
         documento: profile.documento || '',
         telefone: profile.telefone || '',
@@ -84,9 +86,18 @@ export default function CompletarPerfil() {
   };
 
   const validateForm = () => {
-    if (!form.nome.trim()) return setError('Nome é obrigatório'), false;
-    if (!form.documento.trim())
-      return setError(form.tipo === 'cliente' ? 'CNPJ é obrigatório' : 'CPF é obrigatório'), false;
+    if (form.tipo === 'cliente' && !form.nomeEmpresa.trim()) {
+      setError('Nome da empresa é obrigatório');
+      return false;
+    }
+    if (form.tipo === 'motoboy' && !form.nome.trim()) {
+      setError('Nome é obrigatório');
+      return false;
+    }
+    if (!form.documento.trim()) {
+      setError(form.tipo === 'cliente' ? 'CNPJ é obrigatório' : 'CPF é obrigatório');
+      return false;
+    }
     return true;
   };
 
@@ -103,8 +114,9 @@ export default function CompletarPerfil() {
       const { db } = await import('../../firebase/firebaseClient');
 
       await setDoc(doc(db, 'users', user.uid), {
-        nome: form.nome,
         tipo: form.tipo,
+        nome: form.tipo === 'motoboy' ? form.nome : '',
+        nomeEmpresa: form.tipo === 'cliente' ? form.nomeEmpresa : '',
         documento: form.documento,
         telefone: form.telefone,
         endereco: {
@@ -148,27 +160,83 @@ export default function CompletarPerfil() {
       {success && <div className={styles.success}>Perfil salvo com sucesso!</div>}
 
       <form onSubmit={handleSubmit} className={styles.form}>
-        <label className={styles.label}>
-          Nome completo*
-          <input className={styles.input} name="nome" value={form.nome} onChange={handleChange} required />
-        </label>
+        {/* Campo condicional: nomeEmpresa para cliente */}
+        {form.tipo === 'cliente' && (
+          <label className={styles.label}>
+            Nome da empresa*
+            <input
+              className={styles.input}
+              name="nomeEmpresa"
+              value={form.nomeEmpresa}
+              onChange={handleChange}
+              required
+              disabled={saving}
+            />
+          </label>
+        )}
 
-        <label className={styles.label}>
-          Tipo de usuário*
-          <select className={styles.select} name="tipo" value={form.tipo} onChange={handleChange}>
-            <option value="cliente">Cliente</option>
-            <option value="motoboy">Motoboy</option>
-          </select>
-        </label>
+        {/* Campo condicional: nome para motoboy */}
+        {form.tipo === 'motoboy' && (
+          <label className={styles.label}>
+            Nome completo*
+            <input
+              className={styles.input}
+              name="nome"
+              value={form.nome}
+              onChange={handleChange}
+              required
+              disabled={saving}
+            />
+          </label>
+        )}
+
+        <div className={styles.radioGroup}>
+          <label className={styles.radioLabel}>
+            <input
+              type="radio"
+              name="tipo"
+              value="cliente"
+              checked={form.tipo === 'cliente'}
+              onChange={handleChange}
+              disabled={saving}
+            />
+            Cliente
+          </label>
+          <label className={styles.radioLabel}>
+            <input
+              type="radio"
+              name="tipo"
+              value="motoboy"
+              checked={form.tipo === 'motoboy'}
+              onChange={handleChange}
+              disabled={saving}
+            />
+            Motoboy
+          </label>
+        </div>
 
         <label className={styles.label}>
           {form.tipo === 'cliente' ? 'CNPJ*' : 'CPF*'}
-          <input className={styles.input} name="documento" value={form.documento} onChange={handleChange} required />
+          <input
+            className={styles.input}
+            name="documento"
+            value={form.documento}
+            onChange={handleChange}
+            required
+            maxLength={form.tipo === 'cliente' ? 18 : 14}
+            disabled={saving}
+          />
         </label>
 
         <label className={styles.label}>
           Telefone
-          <input className={styles.input} name="telefone" value={form.telefone} onChange={handleChange} />
+          <input
+            className={styles.input}
+            name="telefone"
+            value={form.telefone}
+            onChange={handleChange}
+            disabled={saving}
+          />
         </label>
 
         <fieldset className={styles.fieldset}>
@@ -176,19 +244,37 @@ export default function CompletarPerfil() {
           {['rua', 'numero', 'cidade', 'estado', 'pais'].map((field) => (
             <label key={field} className={styles.label}>
               {field.charAt(0).toUpperCase() + field.slice(1)}
-              <input className={styles.input} name={field} value={form[field]} onChange={handleChange} />
+              <input
+                className={styles.input}
+                name={field}
+                value={form[field]}
+                onChange={handleChange}
+                disabled={saving}
+              />
             </label>
           ))}
         </fieldset>
 
         <label className={styles.label}>
           Responsável
-          <input className={styles.input} name="responsavel" value={form.responsavel} onChange={handleChange} />
+          <input
+            className={styles.input}
+            name="responsavel"
+            value={form.responsavel}
+            onChange={handleChange}
+            disabled={saving}
+          />
         </label>
 
         <label className={styles.label}>
           Contato do responsável
-          <input className={styles.input} name="contatoResponsavel" value={form.contatoResponsavel} onChange={handleChange} />
+          <input
+            className={styles.input}
+            name="contatoResponsavel"
+            value={form.contatoResponsavel}
+            onChange={handleChange}
+            disabled={saving}
+          />
         </label>
 
         <button className={styles.button} type="submit" disabled={saving}>

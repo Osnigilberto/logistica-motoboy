@@ -14,54 +14,23 @@ import {
   FiActivity,
   FiClock,
   FiCheckCircle,
+  FiUser,
 } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthProvider';
 import styles from './DashboardLayout.module.css';
 
 const navItems = {
   cliente: [
-    {
-      href: '/clientes/historico',
-      label: 'Histórico',
-      icon: <FiList />,
-    },
-    {
-      href: '/clientes/motoboys',
-      label: 'Motoboys',
-      icon: <FiUsers />,
-    },
-    {
-      href: '/clientes/nova-entrega',
-      label: 'Nova Entrega',
-      icon: <FiTruck />,
-    },
-    {
-      href: '/clientes/pedidos-ativos',
-      label: 'Pedidos Ativos',
-      icon: <FiPackage />,
-    },
+    { href: '/clientes/historico', label: 'Histórico', icon: <FiList /> },
+    { href: '/clientes/motoboys', label: 'Motoboys', icon: <FiUsers /> },
+    { href: '/clientes/nova-entrega', label: 'Nova Entrega', icon: <FiTruck /> },
+    { href: '/clientes/pedidos-ativos', label: 'Pedidos Ativos', icon: <FiPackage /> },
   ],
   motoboy: [
-    {
-      href: '/motoboy/entregas-disponiveis',
-      label: 'Entregas Disponíveis',
-      icon: <FiActivity />,
-    },
-    {
-      href: '/motoboy/entregas-em-andamento',
-      label: 'Entregas em Andamento',
-      icon: <FiClock />,
-    },
-    {
-      href: '/motoboy/historico',
-      label: 'Histórico',
-      icon: <FiList />,
-    },
-    {
-      href: '/motoboy/status',
-      label: 'Status',
-      icon: <FiCheckCircle />,
-    },
+    { href: '/motoboy/entregas-disponiveis', label: 'Entregas Disponíveis', icon: <FiActivity /> },
+    { href: '/motoboy/entregas-em-andamento', label: 'Entregas em Andamento', icon: <FiClock /> },
+    { href: '/motoboy/historico', label: 'Histórico', icon: <FiList /> },
+    { href: '/motoboy/status', label: 'Status', icon: <FiCheckCircle /> },
   ],
 };
 
@@ -79,20 +48,19 @@ export default function DashboardLayout({ children, userType = 'cliente' }) {
 
   return (
     <div className={styles.layout}>
-
-        {/* Header para mobile */}
+      {/* Header para mobile */}
       <header className={styles.mobileHeader}>
         <button onClick={() => setMenuOpen(!menuOpen)} className={styles.menuButton}>
-        {menuOpen ? <FiX /> : <FiMenu />}
+          {menuOpen ? <FiX /> : <FiMenu />}
         </button>
       </header>
-        
-
-        {/* Sidebar no desktop e drawer no mobile */}
 
       {/* Overlay para mobile */}
-{menuOpen && <div className={`${styles.overlay} ${styles.open}`} onClick={() => setMenuOpen(false)} />}
+      {menuOpen && (
+        <div className={`${styles.overlay} ${styles.open}`} onClick={() => setMenuOpen(false)} />
+      )}
 
+      {/* Sidebar */}
       <aside className={`${styles.sidebar} ${menuOpen ? styles.open : ''}`}>
         <div className={styles.sidebarContent}>
           <h2 className={styles.logoDesktop}>Turbo Express</h2>
@@ -103,7 +71,13 @@ export default function DashboardLayout({ children, userType = 'cliente' }) {
                 <span>{item.label}</span>
               </Link>
             ))}
+            {/* Novo botão: Editar Perfil */}
+            <Link href="/dashboard/editar-perfil" className={styles.navLink}>
+              <FiUser />
+              <span>Editar Perfil</span>
+            </Link>
           </nav>
+
           <button onClick={handleLogout} className={styles.logoutButton}>
             <FiLogOut />
             <span>Sair</span>
@@ -112,9 +86,7 @@ export default function DashboardLayout({ children, userType = 'cliente' }) {
       </aside>
 
       {/* Conteúdo principal */}
-      <main className={styles.mainContent}>
-        {children}
-      </main>
+      <main className={styles.mainContent}>{children}</main>
     </div>
   );
 }

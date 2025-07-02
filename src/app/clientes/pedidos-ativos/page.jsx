@@ -5,13 +5,17 @@ import { useAuth } from '../../../context/AuthProvider';
 import { useRouter } from 'next/navigation';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../firebase/firebaseClient';
+
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 import styles from './pedidosAtivos.module.css';
 
 export default function PedidosAtivos() {
   const { user, loading } = useAuth();
   const router = useRouter();
 
-  const [pedidos, setPedidos] = useState([]);
+  const [entregas, setEntregas] = useState([]);
   const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => {
@@ -22,20 +26,21 @@ export default function PedidosAtivos() {
 
     if (user) {
       const q = query(
-        collection(db, 'pedidos'),
-        where('clientId', '==', user.uid),
+        collection(db, 'entregas'),
+        where('clienteId', '==', user.uid),
         where('status', '==', 'ativo')
       );
 
       const unsubscribe = onSnapshot(
         q,
         (snapshot) => {
-          const pedidosData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          setPedidos(pedidosData);
+          const entregasData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setEntregas(entregasData);
           setLoadingData(false);
         },
         (error) => {
-          console.error('Erro ao buscar pedidos ativos:', error);
+          console.error('Erro ao buscar entregas ativas:', error);
+          toast.error('Erro ao carregar entregas ativas. Tente novamente.');
           setLoadingData(false);
         }
       );
@@ -44,39 +49,72 @@ export default function PedidosAtivos() {
     }
   }, [user, loading, router]);
 
+  const formatDate = (timestamp) => {
+    if (!timestamp) return '-';
+    if (timestamp.toDate) {
+      return timestamp.toDate().toLocaleString('pt-BR', { 
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+    }
+    try {
+      return new Date(timestamp).toLocaleString('pt-BR', { 
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+    } catch {
+      return '-';
+    }
+  };
+
+  const getStatusClass = (status) => {
+    switch (status) {
+      case 'ativo':
+        return styles.statusAtivo;
+      case 'entregue':
+        return styles.statusEntregue;
+      case 'cancelado':
+        return styles.statusCancelado;
+      default:
+        return '';
+    }
+  };
+
   if (loading || loadingData) {
     return (
       <main className={styles.container}>
-        <p>Carregando pedidos ativos...</p>
+        <div className={styles.spinner}></div>
+        <p className={styles.loadingText}>Carregando entregas ativas...</p>
+        <ToastContainer />
       </main>
     );
   }
 
   return (
     <main className={styles.container}>
-      <h1>Pedidos Ativos</h1>
-      {pedidos.length === 0 && <p>Você não tem pedidos ativos.</p>}
+      <h1 className={styles.title}>Entregas Ativas</h1>
+      {entregas.length === 0 && <p className={styles.emptyMessage}>Você não tem entregas ativas.</p>}
       <ul className={styles.list}>
-        {pedidos.map(pedido => (
-          <li key={pedido.id} className={styles.item}>
-            <p><strong>Origem:</strong> {pedido.origem || '-'}</p>
-            <p><strong>Destino:</strong> {pedido.destino || '-'}</p>
-            <p><strong>Status:</strong> {pedido.status || '-'}</p>
-            <p>
-              <strong>Data Entrega:</strong>{' '}
-              {pedido.dataEntrega?.toDate
-                ? pedido.dataEntrega.toDate().toLocaleString()
-                : pedido.dataEntrega
-                ? new Date(pedido.dataEntrega).toLocaleString()
-                : '-'}
-            </p>
-            <p><strong>Descrição:</strong> {pedido.descricao || '—'}</p>
+        {entregas.map(entrega => (
+          <li key={entrega.id} className={styles.card}>
+            <div className={styles.cardHeader}>
+              <span className={`${styles.status} ${getStatusClass(entrega.status)}`}>
+                {entrega.status || '-'}
+              </span>
+              <span className={styles.date}>{formatDate(entrega.dataEntrega)}</span>
+            </div>
+            <div className={styles.cardBody}>
+              <p><strong>Origem:</strong> {entrega.origem || '-'}</p>
+              <p><strong>Destino:</strong> {entrega.destino || '-'}</p>
+              <p><strong>Descrição:</strong> {entrega.descricao || '—'}</p>
+            </div>
           </li>
         ))}
       </ul>
       <button className={styles.button} onClick={() => router.push('/dashboard')}>
         Voltar ao dashboard
       </button>
+      <ToastContainer />
     </main>
   );
 }
