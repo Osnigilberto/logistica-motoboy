@@ -1,7 +1,7 @@
 // src/app/api/finalizar-entrega/route.js
 
 import { getFirestore, doc, updateDoc, getDoc, increment } from 'firebase/firestore';
-import { app } from '@/firebase/firebaseAdmin';
+import { app } from '@/lib/firebaseAdmin';
 import { NextResponse } from 'next/server';
 
 export async function POST(req) {

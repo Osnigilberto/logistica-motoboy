@@ -16,7 +16,7 @@ import {
   Cell,
 } from 'recharts';
 import DashboardLayout from '../components/DashboardLayout';
-import styles from './dashboard.module.css';
+import styles from './completarPerfil.module.css';
 import { db } from '../../firebase/firebaseClient';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { FaMapMarkerAlt, FaClock, FaMoneyBillWave } from 'react-icons/fa';
-import styles from './mapaEntrega.module.css';
+import styles from './MapaEntrega.module.css';
 
 export default function MapaEntrega({ origem, destino, onInfoChange }) {
   const mapRef = useRef(null); // Referência para o container do mapa
