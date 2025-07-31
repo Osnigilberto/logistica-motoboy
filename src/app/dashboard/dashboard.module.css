@@ -23,7 +23,6 @@
   text-transform: uppercase;
 }
 
-
 /* KPIs */
 .kpiSection {
   display: grid;
@@ -39,18 +38,29 @@
   padding: 1.25rem;
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
   text-align: center;
+  transition: box-shadow 0.3s ease;
 }
 
-.kpiCard h3 {
-  font-size: 1rem;
-  color: #333;
-  margin-bottom: 0.5rem;
+.kpiCard:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
 }
 
+/* Cor verde padrão para valores positivos */
 .kpiCard p {
   font-size: 1.5rem;
   font-weight: 600;
   color: #2e7d32;
+  margin: 0;
+}
+
+/* Cor vermelha para KPIs de atraso - aplique essa classe no React para o cartão de atrasadas */
+.kpiCard.atrasadas p {
+  color: #d32f2f;
+}
+
+/* Cor laranja para KPIs de "em andamento" - aplique essa classe no React para o cartão de andamento */
+.kpiCard.andamento p {
+  color: #f57c00;
 }
 
 /* Gráficos */
@@ -91,11 +101,17 @@
   padding: 0.75rem;
   border-bottom: 1px solid #ddd;
   text-align: left;
+  transition: background-color 0.3s ease;
 }
 
 .table th {
   background-color: #f2f2f2;
   color: #444;
+}
+
+/* Efeito hover para linhas da tabela */
+.table tbody tr:hover {
+  background-color: #f0f8ff;
 }
 
 /* Status do motoboy */
@@ -113,33 +129,31 @@
 
 .statusSection p {
   margin-bottom: 1rem;
-}
-
-/* Ações */
-.actionsSection {
+  font-weight: 600;
+  font-size: 1.1rem;
   display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  margin-bottom: 3rem;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.actionButton {
-  background-color: #1976d2;
-  color: white;
-  border: none;
-  padding: 0.75rem 1.25rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background-color 0.2s;
+/* Indicadores visuais para status (use um span com classe status-indicator no React) */
+.status-indicator {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: inline-block;
 }
 
-.actionButton:hover {
-  background-color: #1565c0;
+.status-indicator.disponivel {
+  background-color: #2e7d32; /* verde */
 }
 
-/* Botões auxiliares */
-.button {
+.status-indicator.ocupado {
+  background-color: #d32f2f; /* vermelho */
+}
+
+/* Botão para status do motoboy */
+.statusSection .button {
   padding: 0.6rem 1.2rem;
   font-size: 0.95rem;
   font-weight: 500;
@@ -147,24 +161,20 @@
   border: none;
   cursor: pointer;
   transition: background-color 0.2s;
-}
-
-.logoutButton {
-  background-color: #e53935;
+  background-color: #1976d2;
   color: white;
 }
 
-.logoutButton:hover {
-  background-color: #c62828;
+.statusSection .button:hover {
+  background-color: #1565c0;
 }
 
-.editButton {
-  background-color: #fbc02d;
-  color: #333;
+.statusSection .button.ocupado {
+  background-color: #d32f2f;
 }
 
-.editButton:hover {
-  background-color: #f9a825;
+.statusSection .button.ocupado:hover {
+  background-color: #b71c1c;
 }
 
 /* Loading */

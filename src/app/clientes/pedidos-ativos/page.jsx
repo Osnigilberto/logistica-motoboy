@@ -104,9 +104,12 @@ export default function PedidosAtivos() {
               <span className={styles.date}>{formatDate(entrega.dataEntrega)}</span>
             </div>
             <div className={styles.cardBody}>
+              <p><strong>Destinatário:</strong> {entrega.destinatario || '-'}</p>
+              <p><strong>Telefone:</strong> {entrega.telefone || '-'}</p>
               <p><strong>Origem:</strong> {entrega.origem || '-'}</p>
               <p><strong>Destino:</strong> {entrega.destino || '-'}</p>
               <p><strong>Descrição:</strong> {entrega.descricao || '—'}</p>
+
             </div>
           </li>
         ))}

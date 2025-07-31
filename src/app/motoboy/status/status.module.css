@@ -1,0 +1,99 @@
+/* Container principal */
+.container {
+  max-width: 600px;
+  margin: 3rem auto 2rem auto;
+  padding: 0 1rem;
+  font-family: var(--font-sans); /* usa fonte global */
+  color: var(--color-text);
+  background: var(--color-bg);
+}
+
+/* Loading */
+.loadingContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 60vh;
+  font-size: 1.25rem;
+  color: var(--color-text-secondary);
+}
+
+/* Botão de voltar */
+.buttonBack {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 1.5rem;
+  padding: 0;
+  transition: color 0.2s ease;
+}
+
+.buttonBack:hover,
+.buttonBack:focus {
+  color: var(--color-primary-dark);
+  outline: none;
+}
+
+/* Seção do perfil */
+.perfil {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+/* Foto do perfil */
+.fotoPerfil {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--color-primary);
+  box-shadow: 0 0 12px rgba(0, 112, 243, 0.4);
+  transition: filter 0.3s ease;
+  user-select: none;
+}
+
+.fotoPerfil:hover {
+  filter: brightness(0.85);
+}
+
+/* Nome do motoboy */
+.nome {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+/* Texto enquanto faz upload */
+.uploadingText {
+  font-size: 1rem;
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+/* Responsividade */
+
+@media (max-width: 480px) {
+  .container {
+    margin: 2rem 1rem 1rem 1rem;
+  }
+
+  .fotoPerfil {
+    width: 100px;
+    height: 100px;
+  }
+
+  .nome {
+    font-size: 1.4rem;
+  }
+
+  .buttonBack {
+    font-size: 1rem;
+  }
+}

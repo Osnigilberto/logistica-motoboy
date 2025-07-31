@@ -18,22 +18,37 @@ import {
 import DashboardLayout from '../components/DashboardLayout';
 import styles from './dashboard.module.css';
 import { db } from '../../firebase/firebaseClient';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A28BFE'];
 
+/**
+ * Componente principal do Dashboard do Turbo Express.
+ * Exibe KPIs, gráficos e últimas entregas, com dados dinâmicos do Firestore.
+ */
 export default function Dashboard() {
   const { user, profile, loading } = useAuth();
   const router = useRouter();
 
+  // Estados para controlar loading dos dados
   const [loadingData, setLoadingData] = useState(true);
+  // Controle de status disponível/ocupado para motoboy
   const [isAvailable, setIsAvailable] = useState(true);
+
+  // Dados para gráficos e tabelas
   const [entregasStatusData, setEntregasStatusData] = useState([]);
   const [ultimasEntregas, setUltimasEntregas] = useState([]);
   const [motoboysAtivosCount, setMotoboysAtivosCount] = useState(0);
   const [entregasPorDiaSemana, setEntregasPorDiaSemana] = useState([]);
 
-  // Busca entregas para cliente ou motoboy
+  // KPIs individuais
+  const [entregasEmAndamento, setEntregasEmAndamento] = useState(0);
+  const [entregasAtrasadas, setEntregasAtrasadas] = useState(0);
+  const [totalMes, setTotalMes] = useState(0);
+
+  /**
+   * Busca entregas do usuário de acordo com tipo (cliente ou motoboy).
+   */
   async function fetchEntregasPorUsuario(uid, tipo) {
     const entregasRef = collection(db, 'entregas');
     let q;
@@ -41,7 +56,7 @@ export default function Dashboard() {
     if (tipo === 'cliente') {
       q = query(entregasRef, where('clienteId', '==', uid));
     } else if (tipo === 'motoboy') {
-      q = query(entregasRef, where('motoboyID', '==', uid));
+      q = query(entregasRef, where('motoboyId', '==', uid));
     } else {
       q = query(entregasRef, where('clienteId', '==', uid));
     }
@@ -54,7 +69,9 @@ export default function Dashboard() {
     return entregas;
   }
 
-  // Agrupar entregas por status para o gráfico de pizza
+  /**
+   * Agrupa entregas por status para gráfico de pizza.
+   */
   function agruparPorStatus(entregas) {
     const statusCount = {};
     entregas.forEach((entrega) => {
@@ -65,13 +82,16 @@ export default function Dashboard() {
     return Object.entries(statusCount).map(([name, value]) => ({ name, value }));
   }
 
-  // Agrupar entregas por dia da semana
+  /**
+   * Agrupa entregas por dia da semana para gráfico de barras.
+   */
   function agruparPorDiaDaSemana(entregas) {
     const dias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
     const contagem = Array(7).fill(0);
 
     entregas.forEach((entrega) => {
-      const data = new Date(entrega.dataCriacao);
+      // Ajuste para campo criadoEm (timestamp)
+      const data = entrega.criadoEm?.toDate ? entrega.criadoEm.toDate() : new Date(entrega.criadoEm);
       const diaSemana = data.getDay();
       contagem[diaSemana]++;
     });
@@ -82,14 +102,56 @@ export default function Dashboard() {
     }));
   }
 
-  // Pegar últimas entregas
-  function pegarUltimasEntregas(entregas, limite = 5) {
-    return entregas
-      .sort((a, b) => new Date(b.dataCriacao) - new Date(a.dataCriacao))
+  /**
+   * Pega últimas entregas ordenadas e adiciona nome do cliente e motoboy para exibição.
+   */
+  async function pegarUltimasEntregas(entregas, limite = 5) {
+    const entregasOrdenadas = entregas
+      .sort((a, b) => {
+        // Ordenar pela data criada
+        const dataA = a.criadoEm?.toDate ? a.criadoEm.toDate() : new Date(a.criadoEm);
+        const dataB = b.criadoEm?.toDate ? b.criadoEm.toDate() : new Date(b.criadoEm);
+        return dataB - dataA;
+      })
       .slice(0, limite);
+
+    const entregasComNomes = await Promise.all(
+      entregasOrdenadas.map(async (entrega) => {
+        let nomeCliente = 'Desconhecido';
+        let nomeMotoboy = 'Desconhecido';
+
+        try {
+          if (entrega.clienteId) {
+            const clienteRef = doc(db, 'users', entrega.clienteId);
+            const clienteSnap = await getDoc(clienteRef);
+            if (clienteSnap.exists()) {
+              const data = clienteSnap.data();
+              nomeCliente = data.nomeEmpresa || data.nome || 'Cliente';
+            }
+          }
+
+          if (entrega.motoboyId) {
+            const motoboyRef = doc(db, 'users', entrega.motoboyId);
+            const motoboySnap = await getDoc(motoboyRef);
+            if (motoboySnap.exists()) {
+              const data = motoboySnap.data();
+              nomeMotoboy = data.nome || 'Motoboy';
+            }
+          }
+        } catch (error) {
+          console.error('Erro ao buscar nome do cliente/motoboy:', error);
+        }
+
+        return { ...entrega, nomeCliente, nomeMotoboy };
+      })
+    );
+
+    return entregasComNomes;
   }
 
-  // Buscar motoboys ativos
+  /**
+   * Busca quantidade de motoboys ativos vinculados ao cliente.
+   */
   async function fetchMotoboysAtivos(clienteUid) {
     const vinculosRef = collection(db, 'vinculos');
     const q = query(
@@ -101,16 +163,36 @@ export default function Dashboard() {
     return snapshot.size;
   }
 
+  // Carrega dados quando user e profile estiverem disponíveis
   useEffect(() => {
     if (!loading && user && profile) {
       async function carregarDados() {
         setLoadingData(true);
         try {
+          // Busca entregas do usuário
           const entregas = await fetchEntregasPorUsuario(user.uid, profile.tipo);
+
+          // Atualiza gráficos e tabelas
           setEntregasStatusData(agruparPorStatus(entregas));
-          setUltimasEntregas(pegarUltimasEntregas(entregas));
+          const ultimas = await pegarUltimasEntregas(entregas);
+          setUltimasEntregas(ultimas);
           setEntregasPorDiaSemana(agruparPorDiaDaSemana(entregas));
 
+          // Corrigido para status correto "em andamento"
+          setEntregasEmAndamento(entregas.filter(e => e.status === 'em andamento').length);
+          setEntregasAtrasadas(entregas.filter(e => e.status === 'atrasado').length);
+
+          // Total entregas no mês atual
+          const agora = new Date();
+          const mesAtual = agora.getMonth();
+          const anoAtual = agora.getFullYear();
+          const entregasMes = entregas.filter(e => {
+            const dataEntrega = e.criadoEm?.toDate ? e.criadoEm.toDate() : new Date(e.criadoEm);
+            return dataEntrega.getMonth() === mesAtual && dataEntrega.getFullYear() === anoAtual;
+          });
+          setTotalMes(entregasMes.length);
+
+          // Conta motoboys ativos para cliente
           if (profile.tipo === 'cliente') {
             const count = await fetchMotoboysAtivos(user.uid);
             setMotoboysAtivosCount(count);
@@ -122,6 +204,9 @@ export default function Dashboard() {
           setEntregasStatusData([{ name: 'Erro ao carregar', value: 1 }]);
           setUltimasEntregas([]);
           setMotoboysAtivosCount(0);
+          setEntregasEmAndamento(0);
+          setEntregasAtrasadas(0);
+          setTotalMes(0);
         }
         setLoadingData(false);
       }
@@ -133,13 +218,16 @@ export default function Dashboard() {
     }
   }, [loading, user, profile, router]);
 
+  // Define se usuário é cliente
   const isCliente = profile?.tipo === 'cliente';
   const userType = profile?.tipo || 'cliente';
 
+  // Toggle disponibilidade motoboy
   const toggleAvailability = () => {
     setIsAvailable((prev) => !prev);
   };
 
+  // Enquanto carrega dados exibe loading
   if (loading || loadingData) {
     return (
       <main className={styles.container}>
@@ -149,6 +237,7 @@ export default function Dashboard() {
     );
   }
 
+  // Renderiza dashboard completo
   return (
     <DashboardLayout userType={userType}>
       <h1 className={styles.title}>
@@ -161,33 +250,19 @@ export default function Dashboard() {
         </span>
       </h1>
 
-
-
-      {/* KPIs */}
+      {/* KPIs principais */}
       <section className={styles.kpiSection}>
         <div className={styles.kpiCard}>
           <h3>Entregas em andamento</h3>
-          <p>
-            {
-              entregasStatusData.find((s) =>
-                s.name.toLowerCase().includes('andamento')
-              )?.value || 0
-            }
-          </p>
+          <p>{entregasEmAndamento}</p>
         </div>
         <div className={styles.kpiCard}>
           <h3>Entregas atrasadas</h3>
-          <p>
-            {
-              entregasStatusData.find((s) =>
-                s.name.toLowerCase().includes('atrasada')
-              )?.value || 0
-            }
-          </p>
+          <p>{entregasAtrasadas}</p>
         </div>
         <div className={styles.kpiCard}>
           <h3>Total no mês</h3>
-          <p>{ultimasEntregas.length}</p>
+          <p>{totalMes}</p>
         </div>
         {isCliente && (
           <div className={styles.kpiCard}>
@@ -250,6 +325,7 @@ export default function Dashboard() {
               <tr>
                 <th>ID</th>
                 <th>Cliente</th>
+                <th>Motoboy</th>
                 <th>Status</th>
                 <th>Data</th>
               </tr>
@@ -258,9 +334,16 @@ export default function Dashboard() {
               {ultimasEntregas.map((entrega) => (
                 <tr key={entrega.id}>
                   <td>{entrega.id}</td>
-                  <td>{entrega.clienteId || 'N/D'}</td>
+                  <td>{entrega.nomeCliente || 'N/D'}</td>
+                  <td>{entrega.nomeMotoboy || 'N/D'}</td>
                   <td>{entrega.status}</td>
-                  <td>{new Date(entrega.dataCriacao).toLocaleDateString()}</td>
+                  <td>
+                    {entrega.criadoEm
+                      ? entrega.criadoEm.toDate
+                        ? entrega.criadoEm.toDate().toLocaleDateString()
+                        : new Date(entrega.criadoEm).toLocaleDateString()
+                      : 'N/D'}
+                  </td>
                 </tr>
               ))}
             </tbody>

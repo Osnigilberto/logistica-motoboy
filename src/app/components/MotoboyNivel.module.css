@@ -1,0 +1,52 @@
+.container {
+  background-color: #f9f9f9;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  max-width: 400px;
+  margin: auto;
+  text-align: center;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.icon {
+  color: #fbbf24;
+  font-size: 1.5rem;
+}
+
+.progressBar {
+  height: 1rem;
+  width: 100%;
+  background-color: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 0.5rem 0;
+}
+
+.progress {
+  height: 100%;
+  background-color: #10b981;
+  transition: width 0.3s ease-in-out;
+}
+
+.proximaMeta {
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.bonusInfo {
+  margin-top: 1rem;
+  font-size: 0.85rem;
+  color: #4b5563;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+}

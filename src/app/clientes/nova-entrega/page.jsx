@@ -1,144 +1,179 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { useAuth } from '../../../context/AuthProvider';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { db } from '../../../firebase/firebaseClient';
-import VMasker from 'vanilla-masker';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/firebase/firebaseClient';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { FaMapMarkerAlt, FaClock, FaMoneyBillWave } from 'react-icons/fa';
+import MapaEntrega from '@/app/components/MapaEntrega';
 import styles from './novaEntrega.module.css';
-import { FiArrowLeft, FiCheck } from 'react-icons/fi';
 
-export default function NovaEntrega() {
-  const { user, loading } = useAuth();
+import VMasker from 'vanilla-masker'; // Importa a biblioteca de máscara
+
+export default function NovaEntregaPage() {
   const router = useRouter();
+  const [userId, setUserId] = useState(null);
 
+  // Formulário básico (origem, destino, descrição)
   const [form, setForm] = useState({
     origem: '',
     destino: '',
     descricao: '',
-    contatoRetiradaNome: '',
-    contatoRetiradaTelefone: '',
-    contatoEntregaNome: '',
-    contatoEntregaTelefone: '',
-    tipoServico: 'normal', // valor padrão
   });
 
-  // refs para inputs de telefone
-  const contatoRetiradaTelefoneRef = useRef(null);
-  const contatoEntregaTelefoneRef = useRef(null);
+  // Nome e telefone do destinatário
+  const [destinatario, setDestinatario] = useState('');
+  const [telefoneDestinatario, setTelefoneDestinatario] = useState('');
 
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  // Dados calculados da rota
+  const [distanciaKm, setDistanciaKm] = useState(null);
+  const [tempoMin, setTempoMin] = useState(null);
+  const [custo, setCusto] = useState(null);
 
+  // Controle de loading e erros
+  const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState('');
+
+  // Carrega usuário logado e redireciona se não estiver logado
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/dashboard');
-    }
-  }, [loading, user, router]);
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setUserId(user.uid);
+      } else {
+        router.push('/login');
+      }
+    });
+    return () => unsubscribe();
+  }, [router]);
 
-  // Aplica máscara nos inputs de telefone sempre que o valor mudar
-  useEffect(() => {
-    if (contatoRetiradaTelefoneRef.current) {
-      VMasker(contatoRetiradaTelefoneRef.current).maskPattern('(99) 99999-9999');
-    }
-  }, [form.contatoRetiradaTelefone]);
+  // Aplica máscara automática no telefone (formato brasileiro)
+  const aplicarMascaraTelefone = (valor) => {
+    // Remove tudo que não for número e aplica máscara
+    return VMasker.toPattern(valor.replace(/\D/g, ''), '(99) 99999-9999');
+  };
 
-  useEffect(() => {
-    if (contatoEntregaTelefoneRef.current) {
-      VMasker(contatoEntregaTelefoneRef.current).maskPattern('(99) 99999-9999');
-    }
-  }, [form.contatoEntregaTelefone]);
-
+  // Atualiza formulário genérico (origem, destino, descrição)
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const validatePhone = (phone) => {
-    // Remove tudo que não for número
-    const digits = phone.replace(/\D/g, '');
-    // Valida se tem 10 ou 11 dígitos (DDD + número)
-    return digits.length === 10 || digits.length === 11;
-  };
-
-  const validateForm = () => {
-    if (!form.origem.trim()) {
-      setError('Origem é obrigatória');
-      return false;
-    }
-    if (!form.destino.trim()) {
-      setError('Destino é obrigatório');
-      return false;
-    }
-    if (!form.contatoRetiradaNome.trim()) {
-      setError('Nome do contato para retirada é obrigatório');
-      return false;
-    }
-    if (!validatePhone(form.contatoRetiradaTelefone)) {
-      setError('Telefone do contato para retirada é inválido');
-      return false;
-    }
-    if (!form.contatoEntregaNome.trim()) {
-      setError('Nome do contato para entrega é obrigatório');
-      return false;
-    }
-    if (!validatePhone(form.contatoEntregaTelefone)) {
-      setError('Telefone do contato para entrega é inválido');
-      return false;
-    }
-    setError('');
-    return true;
-  };
-
+  // Submete o formulário, validando campos e salvando no Firestore
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateForm()) return;
 
-    setSaving(true);
+    // Valida campos obrigatórios
+    if (
+      !form.origem ||
+      !form.destino ||
+      !form.descricao ||
+      !destinatario ||
+      !telefoneDestinatario
+    ) {
+      setErro('Preencha todos os campos.');
+      return;
+    }
+
+    // Valida dados da rota calculada
+    if (!distanciaKm || !tempoMin || !custo) {
+      setErro('Rota inválida ou incompleta. Corrija os endereços.');
+      return;
+    }
+
+    setLoading(true);
+    setErro('');
+
     try {
+      // Cálculos financeiros com base em níveis
+      const markup = 1.18; // 18% de markup sobre o custo
+      const valorComMarkup = custo * markup;
+
+      // Define percentual do motoboy conforme custo (simulando níveis)
+      let percentualMotoboy = 0.7; // padrão: 70%
+      if (custo <= 5) {
+        percentualMotoboy = 0.5;
+      } else if (custo <= 10) {
+        percentualMotoboy = 0.65;
+      }
+
+      const valorMotoboy = valorComMarkup * percentualMotoboy;
+      const valorPlataforma = valorComMarkup - valorMotoboy;
+
+      // Salva entrega no Firestore
       await addDoc(collection(db, 'entregas'), {
-        clienteId: user.uid,
-        origem: form.origem,
-        destino: form.destino,
-        descricao: form.descricao,
-        contatoRetirada: {
-          nome: form.contatoRetiradaNome,
-          telefone: form.contatoRetiradaTelefone,
-        },
-        contatoEntrega: {
-          nome: form.contatoEntregaNome,
-          telefone: form.contatoEntregaTelefone,
-        },
-        tipoServico: form.tipoServico,
-        dataCriacao: serverTimestamp(),
+        clienteId: userId,
+        origem: form.origem.trim(),
+        destino: form.destino.trim(),
+        descricao: form.descricao.trim(),
+        destinatario: destinatario.trim(),
+        telefoneDestinatario: telefoneDestinatario.trim(),
+        distanciaKm,
+        tempoMin,
+        custo,
+        valorComMarkup,
+        valorMotoboy,
+        valorPlataforma,
+        percentualMotoboy, // opcional para referência
         status: 'ativo',
-        motoboyId: '',
+        motoboyId: '', // ainda sem motoboy vinculado
+        criadoEm: serverTimestamp(),
       });
-      router.push('/clientes/pedidos-ativos');
+      router.push('/dashboard');
     } catch (err) {
-      setError('Erro ao criar pedido. Tente novamente.');
-      console.error(err);
+      console.error('Erro ao criar entrega:', err);
+      setErro('Erro ao criar entrega. Tente novamente.');
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
   };
-
-  if (loading || !user) {
-    return (
-      <main className={styles.container}>
-        <p>Carregando...</p>
-      </main>
-    );
-  }
 
   return (
     <main className={styles.container}>
+      {/* Botão de voltar */}
+      <button
+        type="button"
+        onClick={() => router.back()}
+        className={styles.buttonBack}
+      >
+        ← Voltar
+      </button>
+
       <h1 className={styles.title}>Nova Entrega</h1>
-      {error && <p className={styles.error}>{error}</p>}
+
       <form onSubmit={handleSubmit} className={styles.form}>
+        {/* Nome do destinatário */}
         <label className={styles.label}>
-          Origem*
+          Nome do destinatário:
+          <input
+            type="text"
+            className={styles.input}
+            value={destinatario}
+            onChange={(e) => setDestinatario(e.target.value)}
+            required
+            disabled={loading}
+          />
+        </label>
+
+        {/* Telefone do destinatário com máscara */}
+        <label className={styles.label}>
+          Telefone do destinatário:
+          <input
+            type="tel"
+            className={styles.input}
+            value={telefoneDestinatario}
+            onChange={(e) =>
+              setTelefoneDestinatario(aplicarMascaraTelefone(e.target.value))
+            }
+            placeholder="(00) 00000-0000"
+            required
+            disabled={loading}
+          />
+        </label>
+
+        {/* Origem */}
+        <label className={styles.label}>
+          Origem
           <input
             type="text"
             name="origem"
@@ -147,12 +182,13 @@ export default function NovaEntrega() {
             className={styles.input}
             placeholder="Endereço de origem"
             required
-            disabled={saving}
+            disabled={loading}
           />
         </label>
 
+        {/* Destino */}
         <label className={styles.label}>
-          Destino*
+          Destino
           <input
             type="text"
             name="destino"
@@ -161,130 +197,84 @@ export default function NovaEntrega() {
             className={styles.input}
             placeholder="Endereço de destino"
             required
-            disabled={saving}
+            disabled={loading}
           />
         </label>
 
+        {/* Descrição */}
         <label className={styles.label}>
-          Descrição / Observações
+          Descrição
           <textarea
             name="descricao"
             value={form.descricao}
             onChange={handleChange}
             className={styles.textarea}
-            placeholder="Detalhes adicionais (opcional)"
-            rows={4}
-            disabled={saving}
+            placeholder="Descrição da entrega"
+            required
+            disabled={loading}
           />
         </label>
 
-        <fieldset style={{ border: 'none', padding: 0 }}>
-          <legend style={{ fontWeight: '700', color: '#5d4037', marginBottom: '0.75rem' }}>
-            Contato para Retirada*
-          </legend>
-          <label className={styles.label}>
-            Nome
-            <input
-              type="text"
-              name="contatoRetiradaNome"
-              value={form.contatoRetiradaNome}
-              onChange={handleChange}
-              className={styles.input}
-              placeholder="Nome do responsável pela retirada"
-              required
-              disabled={saving}
-            />
-          </label>
-          <label className={styles.label}>
-            Telefone
-            <input
-              type="tel"
-              name="contatoRetiradaTelefone"
-              value={form.contatoRetiradaTelefone}
-              onChange={handleChange}
-              className={styles.input}
-              placeholder="Telefone do contato para retirada"
-              required
-              disabled={saving}
-              ref={contatoRetiradaTelefoneRef}
-            />
-          </label>
-        </fieldset>
+        {/* Mensagem de erro */}
+        {erro && <p className={styles.error}>{erro}</p>}
 
-        <fieldset style={{ border: 'none', padding: 0 }}>
-          <legend style={{ fontWeight: '700', color: '#5d4037', marginBottom: '0.75rem' }}>
-            Contato para Entrega*
-          </legend>
-          <label className={styles.label}>
-            Nome
-            <input
-              type="text"
-              name="contatoEntregaNome"
-              value={form.contatoEntregaNome}
-              onChange={handleChange}
-              className={styles.input}
-              placeholder="Nome do responsável pela entrega"
-              required
-              disabled={saving}
-            />
-          </label>
-          <label className={styles.label}>
-            Telefone
-            <input
-              type="tel"
-              name="contatoEntregaTelefone"
-              value={form.contatoEntregaTelefone}
-              onChange={handleChange}
-              className={styles.input}
-              placeholder="Telefone do contato para entrega"
-              required
-              disabled={saving}
-              ref={contatoEntregaTelefoneRef}
-            />
-          </label>
-        </fieldset>
+        {/* Informações da rota e valores calculados */}
+        {distanciaKm && tempoMin && custo && (
+          <div className={styles.info}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <FaMapMarkerAlt />
+              <span><strong>Distância estimada:</strong> {distanciaKm.toFixed(2)} km</span>
+            </div>
 
-        <label className={styles.label}>
-          Tipo de Serviço*
-          <select
-            name="tipoServico"
-            value={form.tipoServico}
-            onChange={handleChange}
-            className={styles.select}
-            required
-            disabled={saving}
-          >
-            <option value="normal">Normal</option>
-            <option value="urgente">Urgente</option>
-            <option value="agendado">Agendado</option>
-            <option value="documentos">Documentos</option>
-            <option value="volumes">Volumes</option>
-          </select>
-        </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <FaClock />
+              <span><strong>Tempo de entrega:</strong> {tempoMin.toFixed(0)} minutos</span>
+            </div>
 
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <FaMoneyBillWave />
+              <span><strong>Valor base:</strong> R$ {custo.toFixed(2)}</span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <FaMoneyBillWave />
+              <span><strong>Taxas e operação:</strong> R$ {(custo * 0.18).toFixed(2)}</span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <FaMoneyBillWave />
+              <span><strong>Valor total:</strong> R$ {(custo * 1.18).toFixed(2)}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Botão de enviar */}
         <div className={styles.buttons}>
           <button
-            type="button"
-            className={styles.buttonSecondary}
-            onClick={() => router.back()}
-            disabled={saving}
+            type="submit"
+            disabled={loading || !distanciaKm || !tempoMin || !custo}
+            className={styles.buttonPrimary}
           >
-            <FiArrowLeft style={{ marginRight: 6, verticalAlign: 'middle' }} />
-            Voltar
-          </button>
-
-          <button type="submit" className={styles.buttonPrimary} disabled={saving}>
-            {saving ? (
-              'Salvando...'
-            ) : (
-              <>
-                <FiCheck style={{ marginRight: 6, verticalAlign: 'middle' }} />
-                Criar Pedido
-              </>
-            )}
+            {loading ? 'Criando...' : 'Criar Entrega'}
           </button>
         </div>
       </form>
+
+      {/* Mapa da rota (exibe se origem e destino estiverem preenchidos) */}
+      {form.origem && form.destino && (
+        <div className={styles.mapaWrapper}>
+          <MapaEntrega
+            origem={form.origem}
+            destino={form.destino}
+            onInfoChange={({ distanciaKm, tempoMin, custo }) => {
+              setDistanciaKm(distanciaKm);
+              setTempoMin(tempoMin);
+              setCusto(custo);
+              setErro('');
+            }}
+          />
+        </div>
+      )}
     </main>
   );
 }

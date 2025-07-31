@@ -1,155 +1,128 @@
+/* novaEntrega.module.css */
+
 .container {
-  max-width: 600px;
-  margin: 3rem auto;
-  padding: 2rem 2.5rem;
-  background: #fdf6ec; /* tom terroso claro */
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(160, 136, 127, 0.25);
-  font-family: 'Inter', sans-serif;
-  color: #4e342e;
+  max-width: 720px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+  font-family: inherit;
+  color: var(--color-text);
 }
 
 .title {
-  font-weight: 700;
+  text-align: center;
   font-size: 2rem;
   margin-bottom: 1.5rem;
-  text-align: center;
-  color: #6d4c41;
-}
-
-.error {
-  background-color: #fdecea;
-  border: 1px solid #f5c6cb;
-  color: #a94442;
-  padding: 0.8rem 1rem;
-  border-radius: 6px;
-  margin-bottom: 1rem;
-  font-weight: 600;
-  text-align: center;
+  color: var(--color-accent);
+  font-weight: 700;
 }
 
 .form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+  background: var(--color-bg);
+  padding: 1.5rem;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--color-border);
 }
 
 .label {
+  display: block;
+  margin-bottom: 0.75rem;
   font-weight: 600;
-  font-size: 1rem;
-  color: #5d4037;
-  display: flex;
-  flex-direction: column;
+  color: var(--color-text);
 }
 
 .input,
-.select,
 .textarea {
-  margin-top: 0.4rem;
-  padding: 0.7rem 1rem;
-  border: 1.5px solid #ccbba4;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  margin-top: 0.25rem;
+  margin-bottom: 1rem;
+  border: 1.5px solid var(--color-border);
   border-radius: 6px;
-  background-color: #fffefb;
   font-size: 1rem;
-  color: #3e2723;
-  font-family: 'Inter', sans-serif;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  font-family: inherit;
+  resize: vertical;
+  background: var(--color-bg);
+  color: var(--color-text);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .input:focus,
-.select:focus,
 .textarea:focus {
-  border-color: #ca6c3d;
   outline: none;
-  box-shadow: 0 0 6px rgba(202, 108, 61, 0.5);
-  background-color: #fffefb;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 4px rgba(191, 128, 64, 0.25);
 }
 
 .textarea {
-  resize: vertical;
   min-height: 80px;
 }
 
-.buttons {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 1.5rem;
+.error {
+  color: #d93025;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  text-align: center;
 }
 
-.buttonPrimary,
-.buttonSecondary {
-  padding: 0.85rem 1.5rem;
-  font-weight: 700;
-  font-size: 1rem;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-  font-family: 'Inter', sans-serif;
-  transition: background-color 0.3s ease, box-shadow 0.3s ease;
-  box-shadow: 0 2px 8px rgba(161, 134, 127, 0.4);
-  user-select: none;
+.info {
+  background: rgba(191, 128, 64, 0.1);
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  color: var(--color-accent);
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: center;
+  border: 1px solid var(--color-border);
+}
+
+.buttons {
+  text-align: center;
+  margin-top: 1rem;
 }
 
 .buttonPrimary {
-  background-color: #ca6c3d;
-  color: white;
-}
-
-.buttonPrimary:hover:not(:disabled) {
-  background-color: #b2592e;
-  box-shadow: 0 4px 14px rgba(178, 89, 46, 0.6);
+  background-color: var(--color-accent);
+  color: #fff;
+  padding: 0.75rem 2rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
 }
 
 .buttonPrimary:disabled {
-  background-color: #e0cfc7;
+  background-color: #d1bfa8;
   cursor: not-allowed;
-  box-shadow: none;
-  color: #7a6352;
 }
 
-.buttonSecondary {
-  background-color: #8d6e63;
-  color: white;
-  box-shadow: 0 2px 8px rgba(141, 110, 99, 0.4);
+.buttonPrimary:hover:not(:disabled) {
+  background-color: #a46a2d;
 }
 
-.buttonSecondary:hover:not(:disabled) {
-  background-color: #735844;
-  box-shadow: 0 4px 14px rgba(115, 88, 68, 0.6);
+.mapaWrapper {
+  margin-top: 2rem;
+  height: 350px;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--color-border);
 }
 
-.buttonSecondary:disabled {
-  background-color: #c4b7ac;
-  cursor: not-allowed;
-  box-shadow: none;
-  color: #6b5a53;
+.buttonBack {
+  margin-bottom: 1rem;
+  background: transparent;
+  border: none;
+  color: var(--color-accent);
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  padding: 0;
 }
 
-/* Para select que usará a classe .select */
-.select {
-  appearance: none;
-  background-image: url("data:image/svg+xml;charset=US-ASCII,%3csvg%20width%3d%2214%22%20height%3d%2210%22%20viewBox%3d%220%200%2014%2010%22%20xmlns%3d%22http%3a//www.w3.org/2000/svg%22%3e%3cpath%20d%3d%22M7%2010L0%200h14L7%2010z%22%20fill%3d%22%236d4c41%22/%3e%3c/svg%3e");
-  background-repeat: no-repeat;
-  background-position: right 1rem center;
-  background-size: 0.8rem;
-  padding-right: 2.5rem;
-}
-
-/* Responsividade */
-@media (max-width: 480px) {
-  .container {
-    margin: 2rem 1rem;
-    padding: 1.5rem 1rem;
-  }
-
-  .buttons {
-    flex-direction: column-reverse;
-    gap: 0.75rem;
-  }
-
-  .buttonPrimary,
-  .buttonSecondary {
-    width: 100%;
-  }
+.buttonBack:hover {
+  text-decoration: underline;
 }

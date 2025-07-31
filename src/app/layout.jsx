@@ -1,9 +1,10 @@
-// src/app/layout.jsx
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthProvider";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import GoogleMapsLoader from "./components/GoogleMapsLoader";
+
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -21,11 +22,14 @@ export default function RootLayout({ children }) {
         <meta name="theme-color" content="#ca6c3d" />
         <link rel="manifest" href="/manifest.json" />
         <link rel="icon" href="/favicon.ico" />
+        
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
+
         <AuthProvider>
+          <GoogleMapsLoader />
           {children}
-        </AuthProvider>
+          </AuthProvider>
         <ToastContainer position="top-right" autoClose={3000} />
       </body>
     </html>

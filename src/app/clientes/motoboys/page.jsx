@@ -22,12 +22,16 @@ export default function Motoboys() {
   const { user, loading } = useAuth();
   const router = useRouter();
 
+  // Estado para lista de motoboys vinculados ao cliente
   const [motoboys, setMotoboys] = useState([]);
+  // Controle de loading dos dados
   const [loadingData, setLoadingData] = useState(true);
+  // Email para vincular motoboy novo
   const [emailMotoboy, setEmailMotoboy] = useState('');
+  // Loading específico para a ação de vincular motoboy
   const [loadingVinculo, setLoadingVinculo] = useState(false);
 
-  // Protege a rota e busca vínculos ativos do cliente
+  // Protege rota: redireciona para login se não estiver autenticado
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
@@ -37,31 +41,32 @@ export default function Motoboys() {
     if (user) {
       setLoadingData(true);
 
+      // Query para pegar vínculos ativos do cliente
       const q = query(
         collection(db, 'vinculos'),
         where('clienteId', '==', user.uid),
         where('status', '==', 'ativo')
       );
 
-      // Escuta em tempo real os vínculos
+      // Escuta em tempo real as mudanças na coleção vínculos
       const unsubscribe = onSnapshot(
         q,
         async (snapshot) => {
-          // Para cada vínculo, busca o motoboy vinculado
+          // Para cada vínculo ativo, busca o usuário motoboy relacionado
           const motoboysData = await Promise.all(
             snapshot.docs.map(async (docSnap) => {
               const vinculoId = docSnap.id;
               const vinculoData = docSnap.data();
 
-              // Busca o documento do motoboy
-              const motoboyRef = doc(db, 'users', vinculoData.motoboyID);
+              // IMPORTANTE: aqui usamos motoboyId (minúsculo) para acessar o documento do motoboy
+              const motoboyRef = doc(db, 'users', vinculoData.motoboyId);
               const motoboySnap = await getDoc(motoboyRef);
 
               if (motoboySnap.exists()) {
                 return {
                   id: motoboySnap.id,
                   ...motoboySnap.data(),
-                  vinculoId, // Para ações como remover vínculo
+                  vinculoId, // armazenamos o id do vínculo para operações futuras
                 };
               }
 
@@ -69,6 +74,7 @@ export default function Motoboys() {
             })
           );
 
+          // Atualiza estado somente com motoboys válidos (sem null)
           setMotoboys(motoboysData.filter(Boolean));
           setLoadingData(false);
         },
@@ -83,7 +89,7 @@ export default function Motoboys() {
     }
   }, [user, loading, router]);
 
-  // Função para vincular motoboy pelo e-mail
+  // Função para vincular motoboy pelo e-mail fornecido
   async function handleVincularMotoboy() {
     if (!emailMotoboy.trim()) {
       toast.error('Por favor, informe o e-mail do motoboy.');
@@ -93,6 +99,7 @@ export default function Motoboys() {
     setLoadingVinculo(true);
 
     try {
+      // Busca usuário do tipo motoboy com email informado
       const q = query(
         collection(db, 'users'),
         where('email', '==', emailMotoboy.trim().toLowerCase()),
@@ -107,11 +114,12 @@ export default function Motoboys() {
       }
 
       const motoboyDoc = querySnapshot.docs[0];
-      const motoboyID = motoboyDoc.id;
+      const motoboyId = motoboyDoc.id; // CORRIGIDO: motoboyId minúsculo
 
+      // Cria novo vínculo na coleção com status 'ativo'
       await addDoc(collection(db, 'vinculos'), {
         clienteId: user.uid,
-        motoboyID,
+        motoboyId, // CORRIGIDO: campo motoboyId minúsculo
         status: 'ativo',
         criadoEm: new Date(),
       });
@@ -126,7 +134,7 @@ export default function Motoboys() {
     }
   }
 
-  // Função para remover vínculo (atualiza status para 'removido')
+  // Função para "remover" vínculo: atualiza status para 'removido'
   async function handleRemoverVinculo(vinculoId) {
     try {
       const vinculoRef = doc(db, 'vinculos', vinculoId);
@@ -138,6 +146,7 @@ export default function Motoboys() {
     }
   }
 
+  // Exibe loading enquanto carrega dados
   if (loading || loadingData) {
     return (
       <main className={styles.container}>
@@ -148,10 +157,12 @@ export default function Motoboys() {
     );
   }
 
+  // Renderização principal da página
   return (
     <main className={styles.container}>
       <h1 className={styles.h1}>Motoboys Vinculados</h1>
 
+      {/* Form para vincular novo motoboy */}
       <div className={styles.vincularContainer}>
         <input
           type="email"
@@ -174,6 +185,7 @@ export default function Motoboys() {
         </button>
       </div>
 
+      {/* Lista de motoboys vinculados */}
       {motoboys.length === 0 && <p>Você não tem motoboys vinculados.</p>}
       <ul className={styles.list}>
         {motoboys.map((motoboy) => (

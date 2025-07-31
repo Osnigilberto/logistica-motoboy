@@ -1,286 +1,285 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthProvider';
 import { useRouter } from 'next/navigation';
-import styles from './completarPerfil.module.css';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts';
+import DashboardLayout from '../components/DashboardLayout';
+import styles from './dashboard.module.css';
+import { db } from '../../firebase/firebaseClient';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
-export default function CompletarPerfil() {
-  const { user, profile, loading, fetchProfile } = useAuth();
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A28BFE'];
+
+export default function Dashboard() {
+  const { user, profile, loading } = useAuth();
   const router = useRouter();
 
-  const [form, setForm] = useState({
-    nome: '',
-    nomeEmpresa: '',
-    tipo: 'cliente',
-    documento: '',
-    telefone: '',
-    rua: '',
-    numero: '',
-    cidade: '',
-    estado: '',
-    pais: '',
-    responsavel: '',
-    contatoResponsavel: '',
-  });
+  const [loadingData, setLoadingData] = useState(true);
+  const [isAvailable, setIsAvailable] = useState(true);
+  const [entregasStatusData, setEntregasStatusData] = useState([]);
+  const [ultimasEntregas, setUltimasEntregas] = useState([]);
+  const [motoboysAtivosCount, setMotoboysAtivosCount] = useState(0);
+  const [entregasPorDiaSemana, setEntregasPorDiaSemana] = useState([]);
 
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
+  // Busca entregas para cliente ou motoboy
+  async function fetchEntregasPorUsuario(uid, tipo) {
+    const entregasRef = collection(db, 'entregas');
+    let q;
+
+    if (tipo === 'cliente') {
+      q = query(entregasRef, where('clienteId', '==', uid));
+    } else if (tipo === 'motoboy') {
+      q = query(entregasRef, where('motoboyID', '==', uid));
+    } else {
+      q = query(entregasRef, where('clienteId', '==', uid));
+    }
+
+    const snapshot = await getDocs(q);
+    const entregas = [];
+    snapshot.forEach((doc) => {
+      entregas.push({ id: doc.id, ...doc.data() });
+    });
+    return entregas;
+  }
+
+  // Agrupar entregas por status para o gráfico de pizza
+  function agruparPorStatus(entregas) {
+    const statusCount = {};
+    entregas.forEach((entrega) => {
+      const status = entrega.status || 'Indefinido';
+      statusCount[status] = (statusCount[status] || 0) + 1;
+    });
+
+    return Object.entries(statusCount).map(([name, value]) => ({ name, value }));
+  }
+
+  // Agrupar entregas por dia da semana
+  function agruparPorDiaDaSemana(entregas) {
+    const dias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    const contagem = Array(7).fill(0);
+
+    entregas.forEach((entrega) => {
+      const data = new Date(entrega.dataCriacao);
+      const diaSemana = data.getDay();
+      contagem[diaSemana]++;
+    });
+
+    return dias.map((dia, index) => ({
+      dia,
+      entregas: contagem[index],
+    }));
+  }
+
+  // Pegar últimas entregas
+  function pegarUltimasEntregas(entregas, limite = 5) {
+    return entregas
+      .sort((a, b) => new Date(b.dataCriacao) - new Date(a.dataCriacao))
+      .slice(0, limite);
+  }
+
+  // Buscar motoboys ativos
+  async function fetchMotoboysAtivos(clienteUid) {
+    const vinculosRef = collection(db, 'vinculos');
+    const q = query(
+      vinculosRef,
+      where('clienteId', '==', clienteUid),
+      where('status', '==', 'ativo')
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.size;
+  }
 
   useEffect(() => {
     if (!loading && user && profile) {
-      setForm({
-        nome: profile.nome || '',
-        nomeEmpresa: profile.nomeEmpresa || '',
-        tipo: profile.tipo || 'cliente',
-        documento: profile.documento || '',
-        telefone: profile.telefone || '',
-        rua: profile.endereco?.rua || '',
-        numero: profile.endereco?.numero || '',
-        cidade: profile.endereco?.cidade || '',
-        estado: profile.endereco?.estado || '',
-        pais: profile.endereco?.pais || '',
-        responsavel: profile.responsavel || '',
-        contatoResponsavel: profile.contatoResponsavel || '',
-      });
-    }
-  }, [loading, user, profile]);
+      async function carregarDados() {
+        setLoadingData(true);
+        try {
+          const entregas = await fetchEntregasPorUsuario(user.uid, profile.tipo);
+          setEntregasStatusData(agruparPorStatus(entregas));
+          setUltimasEntregas(pegarUltimasEntregas(entregas));
+          setEntregasPorDiaSemana(agruparPorDiaDaSemana(entregas));
 
-  useEffect(() => {
-    if (!loading && !user) {
+          if (profile.tipo === 'cliente') {
+            const count = await fetchMotoboysAtivos(user.uid);
+            setMotoboysAtivosCount(count);
+          } else {
+            setMotoboysAtivosCount(0);
+          }
+        } catch (error) {
+          console.error('Erro ao carregar entregas:', error);
+          setEntregasStatusData([{ name: 'Erro ao carregar', value: 1 }]);
+          setUltimasEntregas([]);
+          setMotoboysAtivosCount(0);
+        }
+        setLoadingData(false);
+      }
+      carregarDados();
+    } else if (!loading && !user) {
       router.push('/login');
+    } else if (!loading && user && !profile) {
+      router.push('/completar-perfil');
     }
-  }, [loading, user, router]);
+  }, [loading, user, profile, router]);
 
-  const maskDocumento = (value) => {
-    let v = value.replace(/\D/g, '');
-    if (form.tipo === 'cliente') {
-      v = v.replace(/^(\d{2})(\d)/, '$1.$2')
-        .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
-        .replace(/\.(\d{3})(\d)/, '.$1/$2')
-        .replace(/(\d{4})(\d)/, '$1-$2');
-      return v.slice(0, 18);
-    } else {
-      v = v.replace(/^(\d{3})(\d)/, '$1.$2')
-        .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
-        .replace(/\.(\d{3})(\d)/, '.$1-$2');
-      return v.slice(0, 14);
-    }
+  const isCliente = profile?.tipo === 'cliente';
+  const userType = profile?.tipo || 'cliente';
+
+  const toggleAvailability = () => {
+    setIsAvailable((prev) => !prev);
   };
 
-  const maskTelefone = (value) => {
-    let v = value.replace(/\D/g, '');
-    return v.length > 10
-      ? v.replace(/^(\d{2})(\d{5})(\d{4}).*/, '($1) $2-$3')
-      : v.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
-  };
-
-  const handleChange = (e) => {
-    let { name, value } = e.target;
-    if (name === 'documento') value = maskDocumento(value);
-    if (name === 'telefone' || name === 'contatoResponsavel') value = maskTelefone(value);
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const validateForm = () => {
-    if (form.tipo === 'cliente' && !form.nomeEmpresa.trim()) {
-      setError('Nome da empresa é obrigatório');
-      return false;
-    }
-    if (form.tipo === 'motoboy' && !form.nome.trim()) {
-      setError('Nome é obrigatório');
-      return false;
-    }
-    if (!form.documento.trim()) {
-      setError(form.tipo === 'cliente' ? 'CNPJ é obrigatório' : 'CPF é obrigatório');
-      return false;
-    }
-    return true;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-
-    setSaving(true);
-    setError('');
-    setSuccess(false);
-
-    try {
-      const { doc, setDoc } = await import('firebase/firestore');
-      const { db } = await import('../../firebase/firebaseClient');
-
-      await setDoc(doc(db, 'users', user.uid), {
-        email: user.email, // ✅ salva o e-mail
-        tipo: form.tipo,
-        nome: form.tipo === 'motoboy' ? form.nome : '',
-        nomeEmpresa: form.tipo === 'cliente' ? form.nomeEmpresa : '',
-        documento: form.documento,
-        telefone: form.telefone,
-        endereco: {
-          rua: form.rua,
-          numero: form.numero,
-          cidade: form.cidade,
-          estado: form.estado,
-          pais: form.pais,
-        },
-        responsavel: form.responsavel,
-        contatoResponsavel: form.contatoResponsavel,
-        statusPerfil: 'completo', // ✅ necessário pro AuthProvider
-      }, { merge: true });
-
-      await fetchProfile(user.uid); // ✅ atualiza o contexto
-
-      setSuccess(true);
-      setTimeout(() => {
-        setSuccess(false);
-        router.push('/dashboard');
-      }, 1200);
-    } catch (err) {
-      setError('Erro ao salvar os dados. Tente novamente.');
-      console.error(err);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (loading || !user) {
+  if (loading || loadingData) {
     return (
-      <main className={styles.spinnerWrapper}>
+      <main className={styles.container}>
         <div className={styles.spinner} />
-        <p>Carregando...</p>
+        <p className={styles.loadingText}>Carregando painel...</p>
       </main>
     );
   }
 
   return (
-    <main className={styles.container}>
-      <h1 className={styles.h1}>Complete seu perfil</h1>
+    <DashboardLayout userType={userType}>
+      <h1 className={styles.title}>
+        Bem-vindo(a),{' '}
+        {isCliente
+          ? profile.nomeEmpresa?.trim() || 'Sua empresa'
+          : profile.nome?.trim() || 'Motoboy'}
+        <span className={styles.badge}>
+          {isCliente ? 'Cliente' : 'Motoboy'}
+        </span>
+      </h1>
 
-      {error && <div className={styles.error}>{error}</div>}
-      {success && <div className={styles.success}>Perfil salvo com sucesso!</div>}
 
-      <form onSubmit={handleSubmit} className={styles.form}>
-        {form.tipo === 'cliente' && (
-          <label className={styles.label}>
-            Nome da empresa*
-            <input
-              className={styles.input}
-              name="nomeEmpresa"
-              value={form.nomeEmpresa}
-              onChange={handleChange}
-              required
-              disabled={saving}
-            />
-          </label>
+
+      {/* KPIs */}
+      <section className={styles.kpiSection}>
+        <div className={styles.kpiCard}>
+          <h3>Entregas em andamento</h3>
+          <p>
+            {
+              entregasStatusData.find((s) =>
+                s.name.toLowerCase().includes('andamento')
+              )?.value || 0
+            }
+          </p>
+        </div>
+        <div className={styles.kpiCard}>
+          <h3>Entregas atrasadas</h3>
+          <p>
+            {
+              entregasStatusData.find((s) =>
+                s.name.toLowerCase().includes('atrasada')
+              )?.value || 0
+            }
+          </p>
+        </div>
+        <div className={styles.kpiCard}>
+          <h3>Total no mês</h3>
+          <p>{ultimasEntregas.length}</p>
+        </div>
+        {isCliente && (
+          <div className={styles.kpiCard}>
+            <h3>Motoboys ativos</h3>
+            <p>{motoboysAtivosCount}</p>
+          </div>
         )}
+      </section>
 
-        {form.tipo === 'motoboy' && (
-          <label className={styles.label}>
-            Nome completo*
-            <input
-              className={styles.input}
-              name="nome"
-              value={form.nome}
-              onChange={handleChange}
-              required
-              disabled={saving}
-            />
-          </label>
-        )}
-
-        <div className={styles.radioGroup}>
-          <label className={styles.radioLabel}>
-            <input
-              type="radio"
-              name="tipo"
-              value="cliente"
-              checked={form.tipo === 'cliente'}
-              onChange={handleChange}
-              disabled={saving}
-            />
-            Cliente
-          </label>
-          <label className={styles.radioLabel}>
-            <input
-              type="radio"
-              name="tipo"
-              value="motoboy"
-              checked={form.tipo === 'motoboy'}
-              onChange={handleChange}
-              disabled={saving}
-            />
-            Motoboy
-          </label>
+      {/* Gráficos */}
+      <section className={styles.graphSection}>
+        <div className={styles.graphCard}>
+          <h3>Entregas por status</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <PieChart>
+              <Pie
+                data={entregasStatusData}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                outerRadius={80}
+                label
+              >
+                {entregasStatusData.map((entry, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={COLORS[index % COLORS.length]}
+                  />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend verticalAlign="bottom" height={36} />
+            </PieChart>
+          </ResponsiveContainer>
         </div>
 
-        <label className={styles.label}>
-          {form.tipo === 'cliente' ? 'CNPJ*' : 'CPF*'}
-          <input
-            className={styles.input}
-            name="documento"
-            value={form.documento}
-            onChange={handleChange}
-            required
-            maxLength={form.tipo === 'cliente' ? 18 : 14}
-            disabled={saving}
-          />
-        </label>
+        <div className={styles.graphCard}>
+          <h3>Entregas por dia da semana</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={entregasPorDiaSemana}>
+              <XAxis dataKey="dia" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="entregas" fill="#82ca9d" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </section>
 
-        <label className={styles.label}>
-          Telefone
-          <input
-            className={styles.input}
-            name="telefone"
-            value={form.telefone}
-            onChange={handleChange}
-            disabled={saving}
-          />
-        </label>
+      {/* Últimas entregas */}
+      <section className={styles.tableSection}>
+        <h3>Últimas entregas</h3>
+        {ultimasEntregas.length === 0 ? (
+          <p>Nenhuma entrega encontrada.</p>
+        ) : (
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Cliente</th>
+                <th>Status</th>
+                <th>Data</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ultimasEntregas.map((entrega) => (
+                <tr key={entrega.id}>
+                  <td>{entrega.id}</td>
+                  <td>{entrega.clienteId || 'N/D'}</td>
+                  <td>{entrega.status}</td>
+                  <td>{new Date(entrega.dataCriacao).toLocaleDateString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
 
-        <fieldset className={styles.fieldset}>
-          <legend className={styles.legend}>Endereço</legend>
-          {['rua', 'numero', 'cidade', 'estado', 'pais'].map((field) => (
-            <label key={field} className={styles.label}>
-              {field.charAt(0).toUpperCase() + field.slice(1)}
-              <input
-                className={styles.input}
-                name={field}
-                value={form[field]}
-                onChange={handleChange}
-                disabled={saving}
-              />
-            </label>
-          ))}
-        </fieldset>
-
-        <label className={styles.label}>
-          Responsável
-          <input
-            className={styles.input}
-            name="responsavel"
-            value={form.responsavel}
-            onChange={handleChange}
-            disabled={saving}
-          />
-        </label>
-
-        <label className={styles.label}>
-          Contato do responsável
-          <input
-            className={styles.input}
-            name="contatoResponsavel"
-            value={form.contatoResponsavel}
-            onChange={handleChange}
-            disabled={saving}
-          />
-        </label>
-
-        <button className={styles.button} type="submit" disabled={saving}>
-          {saving ? 'Salvando...' : 'Salvar perfil'}
-        </button>
-      </form>
-    </main>
+      {/* Status do motoboy */}
+      {!isCliente && (
+        <section className={styles.statusSection}>
+          <h3>Status</h3>
+          <p>
+            Atual: <strong>{isAvailable ? 'Disponível' : 'Ocupado'}</strong>
+          </p>
+          <button className={styles.button} onClick={toggleAvailability}>
+            {isAvailable ? 'Ficar ocupado' : 'Ficar disponível'}
+          </button>
+        </section>
+      )}
+    </DashboardLayout>
   );
 }
