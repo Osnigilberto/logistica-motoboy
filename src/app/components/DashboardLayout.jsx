@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   FiMenu,
   FiX,
+  FiFileText,
   FiLogOut,
   FiList,
   FiUsers,
@@ -25,12 +26,16 @@ const navItems = {
     { href: '/clientes/motoboys', label: 'Motoboys', icon: <FiUsers /> },
     { href: '/clientes/nova-entrega', label: 'Nova Entrega', icon: <FiTruck /> },
     { href: '/clientes/pedidos-ativos', label: 'Pedidos Ativos', icon: <FiPackage /> },
+    { href: '/recibo', label: 'Meus Recibos', icon: <FiFileText /> },
+
   ],
   motoboy: [
     { href: '/motoboy/entregas-disponiveis', label: 'Entregas Disponíveis', icon: <FiActivity /> },
     { href: '/motoboy/entregas-em-andamento', label: 'Entregas em Andamento', icon: <FiClock /> },
     { href: '/motoboy/historico', label: 'Histórico', icon: <FiList /> },
     { href: '/motoboy/status', label: 'Status', icon: <FiCheckCircle /> },
+    { href: '/recibo', label: 'Meus Recibos', icon: <FiFileText /> },
+
   ],
 };
 

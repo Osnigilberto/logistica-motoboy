@@ -1,0 +1,58 @@
+.reciboBody {
+  font-size: 14pt;
+  margin: 0;
+  padding: 20px;
+  color: #333;
+  background: white;
+}
+
+/* Estilos gerais do recibo */
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  background: white;
+  padding: 20px;
+  box-shadow: 0 0 5px #ccc;
+  border-radius: 4px;
+}
+
+.title {
+  margin-bottom: 1rem;
+  font-weight: bold;
+  font-size: 1.8rem;
+}
+
+/* Estilos para impressão */
+@media print {
+  /* Remove sombras, cores, e deixa o fundo branco */
+  .container {
+    box-shadow: none;
+    background: white;
+    padding: 0;
+    margin: 0;
+    border-radius: 0;
+  }
+
+  /* Esconde o botão de imprimir */
+  .printButton {
+    display: none !important;
+  }
+
+  /* Remove o fundo da página, se houver */
+  .reciboBody {
+    background: white !important;
+  }
+
+  /* Ajusta fontes e margens para impressão */
+  .reciboBody {
+    font-size: 12pt;
+    padding: 0;
+    margin: 0;
+  }
+
+  /* Ajuste para remover espaços extras */
+  .section {
+    page-break-inside: avoid;
+    margin-bottom: 1rem;
+  }
+}
