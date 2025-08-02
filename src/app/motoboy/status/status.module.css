@@ -1,99 +1,125 @@
-/* Container principal */
 .container {
+  padding: 2rem 1rem;
   max-width: 600px;
-  margin: 3rem auto 2rem auto;
-  padding: 0 1rem;
-  font-family: var(--font-sans); /* usa fonte global */
+  margin: 0 auto;
+  background-color: var(--color-bg);
   color: var(--color-text);
-  background: var(--color-bg);
-}
-
-/* Loading */
-.loadingContainer {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
-  height: 60vh;
-  font-size: 1.25rem;
-  color: var(--color-text-secondary);
 }
 
-/* Botão de voltar */
 .buttonBack {
+  align-self: flex-start;
   background: none;
   border: none;
-  color: var(--color-primary);
-  font-size: 1.1rem;
-  font-weight: 600;
-  cursor: pointer;
+  color: var(--color-accent);
+  font-size: 1rem;
+  font-weight: 500;
   margin-bottom: 1.5rem;
-  padding: 0;
   transition: color 0.2s ease;
 }
 
-.buttonBack:hover,
-.buttonBack:focus {
-  color: var(--color-primary-dark);
-  outline: none;
+.buttonBack:hover {
+  color: var(--color-accent-dark);
 }
 
-/* Seção do perfil */
 .perfil {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 1rem;
-  margin-bottom: 2rem;
-  text-align: center;
+  width: 100%;
 }
 
-/* Foto do perfil */
 .fotoPerfil {
-  width: 120px;
-  height: 120px;
+  width: 140px;
+  height: 140px;
   border-radius: 50%;
   object-fit: cover;
-  border: 3px solid var(--color-primary);
-  box-shadow: 0 0 12px rgba(0, 112, 243, 0.4);
-  transition: filter 0.3s ease;
-  user-select: none;
+  border: 3px solid var(--color-border);
+  transition: opacity 0.3s ease;
 }
 
 .fotoPerfil:hover {
-  filter: brightness(0.85);
+  opacity: 0.9;
 }
 
-/* Nome do motoboy */
 .nome {
-  font-size: 1.8rem;
-  font-weight: 700;
+  font-size: 1.4rem;
+  font-weight: bold;
+  text-align: center;
   color: var(--color-text);
 }
 
-/* Texto enquanto faz upload */
-.uploadingText {
+.dadosXp {
   font-size: 1rem;
-  color: var(--color-primary);
+  color: var(--color-muted);
+  margin-top: -0.5rem;
   font-weight: 600;
 }
 
-/* Responsividade */
+/* Barra de progresso XP */
+.xpContainer {
+  margin-top: 1rem;
+  width: 100%;
+}
 
+.progressBar {
+  height: 16px;
+  background-color: var(--color-border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress {
+  height: 100%;
+  background-color: var(--color-accent);
+  transition: width 0.3s ease;
+  border-radius: 999px 0 0 999px;
+}
+
+/* Medalhas */
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  justify-content: center;
+  width: 100%;
+}
+
+.badge {
+  background-color: var(--color-accent-dark);
+  color: white;
+  padding: 0.4rem 0.8rem;
+  border-radius: 1rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.semBadges {
+  font-size: 0.9rem;
+  color: var(--color-muted);
+  font-style: italic;
+  margin-top: 1rem;
+  text-align: center;
+}
+
+/* Responsividade simples */
 @media (max-width: 480px) {
   .container {
-    margin: 2rem 1rem 1rem 1rem;
+    padding: 1.5rem 1rem;
   }
-
   .fotoPerfil {
-    width: 100px;
-    height: 100px;
+    width: 120px;
+    height: 120px;
   }
-
   .nome {
-    font-size: 1.4rem;
+    font-size: 1.2rem;
   }
-
-  .buttonBack {
-    font-size: 1rem;
+  .badge {
+    font-size: 0.75rem;
+    padding: 0.3rem 0.6rem;
   }
 }

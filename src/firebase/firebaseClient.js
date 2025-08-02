@@ -1,11 +1,12 @@
-// Importa os métodos para inicializar o Firebase e obter instâncias já existentes
+// Importa funções para inicializar o Firebase e verificar apps existentes
 import { initializeApp, getApps } from 'firebase/app'
 
-// Importa os serviços que você usa: Auth e Firestore
+// Importa os serviços que serão usados: autenticação, Firestore e Storage
 import { getAuth } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
+import { getStorage } from 'firebase/storage'
 
-// Configuração do Firebase usando variáveis de ambiente públicas
+// Configuração do Firebase obtida das variáveis de ambiente (NEXT_PUBLIC_* deve estar no .env.local)
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -15,15 +16,16 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 }
 
-// Opcional: log para garantir que a configuração está carregando corretamente
+// Opcional: log para verificar se a configuração está correta (remova em produção)
 console.log('[Firebase] authDomain:', firebaseConfig.authDomain)
 
-// Inicializa o app Firebase apenas se ainda não tiver sido iniciado (evita erro em hot reload)
+// Inicializa o app Firebase apenas se ainda não tiver sido inicializado (para evitar erros em hot reload do Next.js)
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0]
 
-// Instancia os serviços de autenticação e banco de dados
-const auth = getAuth(app)
-const db = getFirestore(app)
+// Inicializa os serviços que vamos usar
+const auth = getAuth(app)       // Serviço de autenticação Firebase
+const db = getFirestore(app)    // Banco de dados Firestore
+const storage = getStorage(app) // Serviço de Storage para arquivos (upload, download, etc)
 
-// Exporta tudo o que for necessário em outros lugares
-export { app, auth, db }
+// Exporta os objetos para usar em outras partes do projeto
+export { app, auth, db, storage }

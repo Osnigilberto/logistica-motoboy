@@ -27,15 +27,12 @@ import {
 } from 'react-icons/fa'
 
 export default function PaginaEntregaEmAndamento() {
-  // Obtém o id da entrega da URL e o roteador do Next.js
   const { id } = useParams()
   const router = useRouter()
   const db = getFirestore(app)
 
-  // Referência para o container do mapa
   const mapRef = useRef(null)
 
-  // Estados locais para dados da entrega, mapa e marcadores
   const [entrega, setEntrega] = useState(null)
   const [map, setMap] = useState(null)
   const [directionsRenderer, setDirectionsRenderer] = useState(null)
@@ -43,10 +40,9 @@ export default function PaginaEntregaEmAndamento() {
   const [polyline, setPolyline] = useState(null)
   const [caminhoPercorrido, setCaminhoPercorrido] = useState([])
 
-  // Guarda o timestamp do início do percurso para calcular tempo real
   const [inicioEntrega, setInicioEntrega] = useState(null)
 
-  // 1. Busca os dados da entrega no Firestore pelo ID
+  // 1. Busca dados da entrega
   useEffect(() => {
     if (!id) return
 
@@ -69,7 +65,7 @@ export default function PaginaEntregaEmAndamento() {
     fetchEntrega()
   }, [id, db, router])
 
-  // 2. Inicializa o mapa e desenha a rota entre origem e destino
+  // 2. Inicializa mapa e rota
   useEffect(() => {
     if (!entrega || typeof window.google === 'undefined') return
 
@@ -77,7 +73,6 @@ export default function PaginaEntregaEmAndamento() {
     const directionsService = new google.maps.DirectionsService()
     const directionsDisplay = new google.maps.DirectionsRenderer()
 
-    // Cria o mapa centrado em local padrão (pode ajustar)
     const mapInstance = new google.maps.Map(mapRef.current, {
       zoom: 14,
       center: { lat: -27.5954, lng: -48.548 },
@@ -87,21 +82,18 @@ export default function PaginaEntregaEmAndamento() {
     directionsDisplay.setMap(mapInstance)
     setDirectionsRenderer(directionsDisplay)
 
-    // Geocodifica endereço da origem
     geocoder.geocode({ address: entrega.origem }, (resultsOrigem, status1) => {
       if (status1 !== 'OK') {
         toast.error('Erro na geocodificação da origem')
         return
       }
 
-      // Geocodifica endereço do destino
       geocoder.geocode({ address: entrega.destino }, (resultsDestino, status2) => {
         if (status2 !== 'OK') {
           toast.error('Erro na geocodificação do destino')
           return
         }
 
-        // Solicita rota entre origem e destino
         directionsService.route(
           {
             origin: resultsOrigem[0].geometry.location,
@@ -120,7 +112,7 @@ export default function PaginaEntregaEmAndamento() {
     })
   }, [entrega])
 
-  // 3. Atualiza posição do motoboy em tempo real, move marcador e desenha rota real percorrida
+  // 3. Atualiza posição do motoboy e desenha linha do percurso
   useEffect(() => {
     if (!map) return
 
@@ -129,12 +121,10 @@ export default function PaginaEntregaEmAndamento() {
         const { latitude, longitude } = pos.coords
         const position = new google.maps.LatLng(latitude, longitude)
 
-        // Se for a primeira posição, salva o timestamp para cálculo do tempo real
         if (!inicioEntrega) {
           setInicioEntrega(Date.now())
         }
 
-        // Cria marcador da posição se não existir, senão atualiza a posição
         if (!userMarker) {
           const marker = new google.maps.Marker({
             position,
@@ -154,17 +144,14 @@ export default function PaginaEntregaEmAndamento() {
           userMarker.setPosition(position)
         }
 
-        // Move o mapa para acompanhar o motoboy
         map.panTo(position)
 
-        // Atualiza o caminho percorrido para desenhar no mapa
         setCaminhoPercorrido(prev => {
           const novoCaminho = [...prev, position]
 
           if (polyline) {
             polyline.setPath(novoCaminho)
           } else {
-            // Cria a linha poligonal no mapa
             const novaLinha = new google.maps.Polyline({
               path: novoCaminho,
               geodesic: true,
@@ -186,29 +173,99 @@ export default function PaginaEntregaEmAndamento() {
       { enableHighAccuracy: true }
     )
 
-    // Limpa o watch quando componente desmontar
     return () => navigator.geolocation.clearWatch(watchId)
   }, [map, userMarker, polyline, inicioEntrega])
 
-  // 4. Função para finalizar entrega com confirmação e salvar tempo real
+  // === Função auxiliar para cálculo de XP e nível ===
+
+  // Curva de XP necessária para cada nível (índice 0 = nível 1, etc)
+  const xpParaNivel = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
+
+  // Calcula nível e progresso dado XP total acumulado
+  function calcularNivelEProgresso(xpTotal) {
+    let nivel = 1
+    let xpAcumulado = 0
+    for (let i = 0; i < xpParaNivel.length; i++) {
+      xpAcumulado += xpParaNivel[i]
+      if (xpTotal < xpAcumulado) {
+        nivel = i + 1
+        // XP acumulado no começo do nível atual
+        const xpInicioNivel = xpAcumulado - xpParaNivel[i]
+        const progresso = (xpTotal - xpInicioNivel) / xpParaNivel[i]
+        return { nivel, progresso }
+      }
+    }
+    // Se passou do nível 10, fica no máximo
+    return { nivel: 10, progresso: 1 }
+  }
+
+  // Calcula XP da entrega com fórmula híbrida: distância + tempo + quantidade
+  function calcularXpEntrega(distanciaKm, tempoMin, quantidade) {
+    const xpDistancia = distanciaKm * 10
+    const xpTempo = tempoMin * 2
+    const xpQuantidade = quantidade * 50
+    return xpDistancia + xpTempo + xpQuantidade
+  }
+
+  // 4. Função para finalizar entrega, atualizar Firestore e XP
   const finalizarEntrega = async () => {
     if (!entrega) return
 
     const confirmar = confirm('Tem certeza que deseja finalizar esta entrega?')
     if (!confirmar) return
 
-    // Calcula tempo real da entrega em minutos
+    // Calcula tempo real em minutos desde início da entrega
     const tempoRealMin = inicioEntrega
       ? Math.round((Date.now() - inicioEntrega) / 60000)
-      : null
+      : 0
 
     try {
+      // Atualiza status da entrega no Firestore
       await updateDoc(doc(db, 'entregas', entrega.id), {
         status: 'finalizada',
         atualizadoEm: serverTimestamp(),
         tempoRealMin,
       })
-      toast.success('Entrega finalizada!')
+
+      // Busca dados do motoboy para atualizar XP
+      const userDocRef = doc(db, 'users', entrega.motoboyId)
+      const userSnap = await getDoc(userDocRef)
+
+      if (!userSnap.exists()) {
+        toast.error('Perfil do motoboy não encontrado para atualizar XP')
+        return
+      }
+
+      const userData = userSnap.data()
+
+      const xpAtual = userData.xpAtual || 0
+      const nivelAtual = userData.nivel || 1
+
+      // Calcula XP ganho na entrega
+      const xpGanho = calcularXpEntrega(
+        entrega.distanciaKm || 0,
+        tempoRealMin,
+        1 // quantidade de entregas (sempre 1 por vez aqui)
+      )
+
+      const novoXpTotal = xpAtual + xpGanho
+
+      // Calcula novo nível e progresso
+      const { nivel: novoNivel, progresso } = calcularNivelEProgresso(novoXpTotal)
+
+      // Atualiza dados do motoboy no Firestore
+      await updateDoc(userDocRef, {
+        xpAtual: novoXpTotal,
+        nivel: novoNivel,
+        progressoXP: progresso,
+        atualizadoEm: serverTimestamp(),
+      })
+
+      toast.success(
+        `Entrega finalizada! XP ganho: ${xpGanho.toFixed(
+          1
+        )}, Nível atual: ${novoNivel}`
+      )
       router.push(`/recibo/${entrega.id}`)
     } catch (error) {
       toast.error('Erro ao finalizar entrega.')
@@ -216,27 +273,31 @@ export default function PaginaEntregaEmAndamento() {
     }
   }
 
-  // 5. Enquanto entrega não carregar, mostra loading
   if (!entrega) return <p className={styles.loading}>Carregando entrega...</p>
 
   return (
     <div className={styles.container}>
-      {/* Botão voltar com ícone e aria-label */}
+      {/* Botão voltar */}
       <button
         onClick={() => router.back()}
         className={styles.botaoVoltar}
         aria-label="Voltar para a página anterior"
-        style={{ touchAction: 'manipulation' }} // melhora resposta em touch mobile
+        style={{ touchAction: 'manipulation' }}
       >
         <FaArrowLeft aria-hidden="true" /> Voltar
       </button>
 
       <h1 className={styles.titulo}>Rota da Entrega</h1>
 
-      {/* Container do mapa */}
-      <div ref={mapRef} className={styles.mapa} aria-label="Mapa mostrando a rota da entrega" role="application" />
+      {/* Mapa */}
+      <div
+        ref={mapRef}
+        className={styles.mapa}
+        aria-label="Mapa mostrando a rota da entrega"
+        role="application"
+      />
 
-      {/* Informações detalhadas da entrega com ícones e aria-labels */}
+      {/* Informações da entrega */}
       <div className={styles.info}>
         <div className={styles.cardLinha}>
           <FaMapMarkerAlt className={styles.cardIcone} aria-label="Ícone de origem" />
@@ -260,19 +321,22 @@ export default function PaginaEntregaEmAndamento() {
         </div>
         <div className={styles.cardLinha}>
           <FaRulerHorizontal className={styles.cardIcone} aria-label="Ícone de distância" />
-          <strong>Distância:</strong> <span>{entrega.distanciaKm?.toFixed(2)} km</span>
+          <strong>Distância:</strong>{' '}
+          <span>{entrega.distanciaKm?.toFixed(2) || '0.00'} km</span>
         </div>
         <div className={styles.cardLinha}>
           <FaClock className={styles.cardIcone} aria-label="Ícone de tempo estimado" />
-          <strong>Tempo estimado:</strong> <span>{Math.round(entrega.tempoMin)} min</span>
+          <strong>Tempo estimado:</strong>{' '}
+          <span>{Math.round(entrega.tempoMin) || 0} min</span>
         </div>
         <div className={styles.cardLinha}>
           <FaDollarSign className={styles.cardIcone} aria-label="Ícone de valor" />
-          <strong>Valor para você:</strong> <span>R$ {entrega.valorMotoboy?.toFixed(2)}</span>
+          <strong>Valor para você:</strong>{' '}
+          <span>R$ {entrega.valorMotoboy?.toFixed(2) || '0.00'}</span>
         </div>
       </div>
 
-      {/* Botão finalizar entrega com ícone, aria-label e touchAction para melhor resposta mobile */}
+      {/* Botão finalizar entrega */}
       <button
         onClick={finalizarEntrega}
         className={styles.botaoFinalizar}
