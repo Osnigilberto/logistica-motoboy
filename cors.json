@@ -1,21 +1,8 @@
 [
   {
-    "origin": [
-      "https://turboexpress.vercel.app",
-      "http://localhost:3000"
-    ],
-    "method": [
-      "GET",
-      "POST",
-      "PUT",
-      "DELETE"
-    ],
-    "maxAgeSeconds": 3600,
-    "responseHeader": [
-      "Content-Type",
-      "Authorization",
-      "X-Goog-Upload-Protocol",
-      "X-Goog-Upload-Header"
-    ]
+    "origin": ["http://localhost:3000", "https://turboexpress.vercel.app"],
+    "method": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    "responseHeader": ["Content-Type", "Authorization"],
+    "maxAgeSeconds": 3600
   }
 ]

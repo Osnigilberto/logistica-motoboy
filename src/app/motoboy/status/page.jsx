@@ -1,217 +1,103 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
+import styles from './status.module.css'; // Importa o CSS Module
 import { useAuth } from '@/context/AuthProvider';
-import {
-  ref as storageRef,
-  uploadBytes,
-  getDownloadURL,
-} from 'firebase/storage';
+import { db } from '@/firebase/firebaseClient';
 import {
   doc,
   getDoc,
-  updateDoc,
   collection,
   query,
   where,
   getDocs,
+  Timestamp,
 } from 'firebase/firestore';
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import {
+  FaArrowLeft,
+  FaBox,
+  FaMoneyBillWave,
+} from 'react-icons/fa';
 import { useRouter } from 'next/navigation';
-import styles from './status.module.css';
-
-// Importa instâncias já configuradas
-import { db, storage } from '@/firebase/firebaseClient';
-
-// XP necessário por nível (níveis 1 a 10)
-const niveisXP = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000];
-
-// Função para calcular XP total baseado em distância, tempo e quantidade
-function calcularXP(distanciaKm, tempoMin, entregasRealizadas) {
-  const xpDistancia = distanciaKm * 10;       // 10 XP por km
-  const xpTempo = tempoMin * 0.5;             // 0.5 XP por minuto
-  const xpQuantidade = entregasRealizadas * 20; // 20 XP por entrega
-  return Math.floor(xpDistancia + xpTempo + xpQuantidade);
-}
-
-// Função para calcular nível e progresso % baseado no XP total
-function getNivelEProgresso(xpTotal) {
-  let nivel = 1;
-  let xpAcumulado = 0;
-
-  for (let i = 0; i < niveisXP.length; i++) {
-    xpAcumulado += niveisXP[i];
-    if (xpTotal < xpAcumulado) {
-      const xpAnterior = xpAcumulado - niveisXP[i];
-      const progresso = ((xpTotal - xpAnterior) / niveisXP[i]) * 100;
-      return { nivel: i + 1, progresso: Math.min(progresso, 100) };
-    }
-  }
-  // Se XP >= total para nível 10
-  return { nivel: 10, progresso: 100 };
-}
-
-// Medals para gamificação
-const MEDALHAS = [
-  { id: 'primeira', nome: 'Primeira entrega concluída 🥇' },
-  { id: '10semana', nome: '10 entregas na mesma semana 📦' },
-  { id: '50kmdia', nome: '50km em um dia 🚀' },
-  { id: '5dias', nome: '5 dias seguidos entregando 🔁' },
-  { id: 'chuva', nome: 'Entrega em dia de chuva 🌧️' },
-];
-
-// Função auxiliar para determinar medalhas ativas (exemplo simplificado)
-function calcularMedalhas(entregasFinalizadas, distanciaMaxDia, diasSeguidos, entregasNaSemana, entregasEmDiaChuva) {
-  const medalhasAtivas = [];
-
-  if (entregasFinalizadas >= 1) medalhasAtivas.push(MEDALHAS[0]);
-  if (entregasNaSemana >= 10) medalhasAtivas.push(MEDALHAS[1]);
-  if (distanciaMaxDia >= 50) medalhasAtivas.push(MEDALHAS[2]);
-  if (diasSeguidos >= 5) medalhasAtivas.push(MEDALHAS[3]);
-  if (entregasEmDiaChuva >= 1) medalhasAtivas.push(MEDALHAS[4]);
-
-  return medalhasAtivas;
-}
+import { startOfWeek, endOfWeek } from 'date-fns';
 
 export default function StatusPage() {
-  const { user } = useAuth();
+  const { user } = useAuth(); // Dados do usuário autenticado
+  const [dados, setDados] = useState(null);
+  const [totalEntregas, setTotalEntregas] = useState(0);
+  const [saldoPendente, setSaldoPendente] = useState(0);
   const router = useRouter();
 
-  const [profile, setProfile] = useState(null);
-  const [loadingProfile, setLoadingProfile] = useState(true);
-  const [fotoURL, setFotoURL] = useState('/avatar-padrao.png');
-  const [uploading, setUploading] = useState(false);
-
-  const inputFileRef = useRef();
-
-  // Estado para medalhas que serão exibidas
-  const [medalhasAtivas, setMedalhasAtivas] = useState([]);
-
-  useEffect(() => {
-    if (!user) {
-      router.push('/login');
-      return;
-    }
-
-    async function fetchProfileAndXP() {
-      setLoadingProfile(true);
-
-      try {
-        const userRef = doc(db, 'users', user.uid);
-        const userSnap = await getDoc(userRef);
-
-        if (!userSnap.exists()) {
-          setLoadingProfile(false);
-          return;
-        }
-
-        const data = userSnap.data();
-
-        // Define foto
-        const foto = data.fotoURL?.trim()
-          ? data.fotoURL
-          : '/avatar-padrao.png';
-        setFotoURL(foto);
-
-        // Busca entregas finalizadas
-        const entregasRef = collection(db, 'entregas');
-        const q = query(
-          entregasRef,
-          where('motoboyId', '==', user.uid),
-          where('status', '==', 'finalizada')
-        );
-        const entregasSnap = await getDocs(q);
-
-        // Variáveis para cálculo de XP e medalhas
-        let distanciaTotal = 0;
-        let tempoTotal = 0;
-        let entregasRealizadas = entregasSnap.size;
-
-        // Para medalhas específicas (exemplos)
-        let distanciaMaxDia = 0;
-        let diasSeguidos = 0; // Para calcular, você precisaria buscar histórico de datas
-        let entregasNaSemana = 0; // Similar, basear em datas e status
-        let entregasEmDiaChuva = 0; // Precisaria integrar com API clima (futuro)
-
-        // Somar distância e tempo das entregas finalizadas
-        entregasSnap.forEach((doc) => {
-          const e = doc.data();
-          distanciaTotal += e.distanciaKm || 0;
-          tempoTotal += e.tempoMin || 0;
-
-          if (e.distanciaKm > distanciaMaxDia) distanciaMaxDia = e.distanciaKm;
-
-          // TODO: calcular diasSeguidos, entregasNaSemana, entregasEmDiaChuva
-        });
-
-        // Calcula XP híbrido
-        const xpCalculado = calcularXP(distanciaTotal, tempoTotal, entregasRealizadas);
-
-        // Calcula nível e progresso da barra
-        const { nivel, progresso } = getNivelEProgresso(xpCalculado);
-
-        // Atualiza Firestore se necessário
-        if (data.xp !== xpCalculado || data.nivel !== nivel) {
-          await updateDoc(userRef, {
-            xp: xpCalculado,
-            nivel: nivel,
-          });
-        }
-
-        // Calcula medalhas ativas com base em variáveis (simplificado)
-        const badges = calcularMedalhas(
-          entregasRealizadas,
-          distanciaMaxDia,
-          diasSeguidos,
-          entregasNaSemana,
-          entregasEmDiaChuva
-        );
-        setMedalhasAtivas(badges);
-
-        // Atualiza estado local
-        setProfile({
-          ...data,
-          xp: xpCalculado,
-          nivel: nivel,
-          progressoXP: progresso,
-          distanciaTotal,
-          tempoTotal,
-          entregasRealizadas,
-        });
-      } catch (err) {
-        console.error('Erro ao buscar perfil e XP:', err);
-      } finally {
-        setLoadingProfile(false);
+  // Busca dados do perfil no Firestore
+  async function buscarDados() {
+    try {
+      const docRef = doc(db, 'users', user.uid);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        setDados(docSnap.data());
+      } else {
+        toast.error('Perfil não encontrado.');
       }
+    } catch (error) {
+      toast.error('Erro ao carregar perfil.');
+      console.error(error);
     }
+  }
 
-    fetchProfileAndXP();
-  }, [user, router]);
-
-  // Upload foto
-  const handleFileChange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setUploading(true);
+  // Busca estatísticas da semana atual
+  async function buscarEstatisticas() {
+    if (!user?.uid) return;
 
     try {
-      const ref = storageRef(storage, `fotos-perfil/${user.uid}`);
-      await uploadBytes(ref, file);
-      const url = await getDownloadURL(ref);
+      const entregasRef = collection(db, 'entregas');
 
-      const userRef = doc(db, 'users', user.uid);
-      await updateDoc(userRef, { fotoURL: url });
+      // 1. Total de entregas finalizadas do motoboy (sem filtro de data ou pagamento)
+      const qTotal = query(
+        entregasRef,
+        where('motoboyId', '==', user.uid),
+        where('status', '==', 'finalizada')
+      );
 
-      setFotoURL(url);
-      setProfile((prev) => ({ ...prev, fotoURL: url }));
+      const snapTotal = await getDocs(qTotal);
+      setTotalEntregas(snapTotal.size);
+
+      // 2. Saldo pendente da semana atual
+      const inicioSemana = startOfWeek(new Date(), { weekStartsOn: 1 }); // segunda
+      const fimSemana = endOfWeek(new Date(), { weekStartsOn: 1 });     // domingo
+
+      const qPendentes = query(
+        entregasRef,
+        where('motoboyId', '==', user.uid),
+        where('status', '==', 'finalizada'),
+        where('pago', '==', false),
+        where('criadoEm', '>=', Timestamp.fromDate(inicioSemana)),
+        where('criadoEm', '<=', Timestamp.fromDate(fimSemana))
+      );
+
+      const snapPendentes = await getDocs(qPendentes);
+      let total = 0;
+      snapPendentes.forEach(doc => {
+        const dados = doc.data();
+        total += dados.valorMotoboy || 0;
+      });
+
+      setSaldoPendente(total);
     } catch (error) {
-      console.error('Erro ao fazer upload da foto:', error);
-      alert('Erro ao atualizar a foto. Tente novamente.');
+      console.error('Erro ao buscar estatísticas:', error);
+      toast.error('Erro ao carregar estatísticas.');
     }
+  }
 
-    setUploading(false);
-  };
+  useEffect(() => {
+    if (user?.uid) {
+      buscarDados();
+      buscarEstatisticas();
+    }
+  }, [user]);
 
-  if (loadingProfile) {
+  if (!dados) {
     return (
       <main className={styles.loadingContainer}>
         <p>Carregando perfil...</p>
@@ -219,78 +105,71 @@ export default function StatusPage() {
     );
   }
 
-  if (!profile) {
-    return (
-      <main className={styles.loadingContainer}>
-        <p>Perfil não encontrado.</p>
-      </main>
-    );
-  }
+  const progressoPercent = (dados.progressoXP ?? 0) * 100;
 
   return (
     <main className={styles.container}>
+      {/* Botão de voltar */}
       <button
-        onClick={() => router.back()}
         className={styles.buttonBack}
+        onClick={() => router.back()}
         aria-label="Voltar para a tela anterior"
       >
-        ← Voltar
+        <FaArrowLeft /> Voltar
       </button>
 
+      {/* Perfil do motoboy */}
       <section className={styles.perfil}>
         <img
-          src={fotoURL}
-          alt="Foto de perfil do motoboy"
+          src={user.photoURL || '/avatar-padrao.png'}
+          alt="Foto de perfil"
           className={styles.fotoPerfil}
-          onClick={() => !uploading && inputFileRef.current.click()}
-          title="Clique para alterar a foto"
-          style={{
-            cursor: uploading ? 'not-allowed' : 'pointer',
-          }}
-          loading="lazy"
-          draggable={false}
         />
-        <input
-          type="file"
-          accept="image/*"
-          ref={inputFileRef}
-          onChange={handleFileChange}
-          disabled={uploading}
-          style={{ display: 'none' }}
-        />
-        {uploading && <p className={styles.uploadingText}>Enviando foto...</p>}
 
-        <h1 className={styles.nome}>{profile.nome || 'Motoboy'}</h1>
+        <h1 className={styles.nome}>{dados.nome || 'Motoboy'}</h1>
 
         <p className={styles.dadosXp}>
-          Nível: {profile.nivel} — XP: {profile.xp}
+          Nível {dados.nivel || 1} • {Math.floor(progressoPercent)}% XP
         </p>
 
         {/* Barra de progresso XP */}
-        <div className={styles.xpContainer}>
+        <div
+          className={styles.xpContainer}
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.floor(progressoPercent)}
+        >
           <div className={styles.progressBar}>
             <div
               className={styles.progress}
-              style={{ width: `${profile.progressoXP}%` }}
-              aria-label={`Progresso para o próximo nível: ${profile.progressoXP.toFixed(
-                1
-              )}%`}
-              role="progressbar"
+              style={{ width: `${progressoPercent}%` }}
             />
           </div>
         </div>
 
         {/* Medalhas */}
         <div className={styles.badges}>
-          {medalhasAtivas.length > 0 ? (
-            medalhasAtivas.map((badge) => (
-              <div key={badge.id} className={styles.badge}>
-                {badge.nome}
+          {dados.medalhas?.length > 0 ? (
+            dados.medalhas.map((medalha, idx) => (
+              <div key={idx} className={styles.badge}>
+                🏅 {medalha}
               </div>
             ))
           ) : (
-            <p className={styles.semBadges}>Sem conquistas ainda</p>
+            <p className={styles.semBadges}>Nenhuma medalha ainda</p>
           )}
+        </div>
+      </section>
+
+      {/* Estatísticas */}
+      <section className={styles.estatisticas}>
+        <div className={styles.statCard}>
+          <FaBox size={20} /> Entregas finalizadas: <strong>{totalEntregas}</strong>
+        </div>
+        <div className={styles.statCard}>
+          <FaMoneyBillWave size={20} /> Saldo pendente:{' '}
+          <strong>R$ {saldoPendente.toFixed(2)}</strong>
         </div>
       </section>
     </main>
