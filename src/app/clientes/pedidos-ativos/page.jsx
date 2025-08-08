@@ -92,31 +92,38 @@ export default function PedidosAtivos() {
 
   return (
     <main className={styles.container}>
+      <button
+        type="button"
+        onClick={() => router.push('/dashboard')}
+        className={styles.buttonBack}
+      >
+        ← Voltar
+      </button>
+
       <h1 className={styles.title}>Entregas Ativas</h1>
-      {entregas.length === 0 && <p className={styles.emptyMessage}>Você não tem entregas ativas.</p>}
-      <ul className={styles.list}>
+
+      {entregas.length === 0 && <p className={styles.empty}>Você não tem entregas ativas.</p>}
+
+      <ul className={styles.lista}>
         {entregas.map(entrega => (
-          <li key={entrega.id} className={styles.card}>
+          <li key={entrega.id} className={styles.item}>
             <div className={styles.cardHeader}>
               <span className={`${styles.status} ${getStatusClass(entrega.status)}`}>
                 {entrega.status || '-'}
               </span>
-              <span className={styles.date}>{formatDate(entrega.dataEntrega)}</span>
+              <span className={styles.date}>{formatDate(entrega.criadoEm)}</span>
             </div>
             <div className={styles.cardBody}>
               <p><strong>Destinatário:</strong> {entrega.destinatario || '-'}</p>
-              <p><strong>Telefone:</strong> {entrega.telefone || '-'}</p>
+              <p><strong>Telefone:</strong> {entrega.telefoneDestinatario || '-'}</p>
               <p><strong>Origem:</strong> {entrega.origem || '-'}</p>
               <p><strong>Destino:</strong> {entrega.destino || '-'}</p>
               <p><strong>Descrição:</strong> {entrega.descricao || '—'}</p>
-
             </div>
           </li>
         ))}
       </ul>
-      <button className={styles.button} onClick={() => router.push('/dashboard')}>
-        Voltar ao dashboard
-      </button>
+
       <ToastContainer />
     </main>
   );

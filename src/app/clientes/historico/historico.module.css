@@ -1,115 +1,141 @@
+/* historico.module.css */
+
+/* Container geral da página */
 .container {
-  padding: 2rem;
   max-width: 900px;
   margin: 0 auto;
-  font-family: 'Inter', sans-serif;
+  padding: 20px;
 }
 
+/* Botão de voltar */
+.buttonBack {
+  background-color: #e0e0e0;
+  color: #333;
+  border: none;
+  padding: 8px 14px;
+  margin-bottom: 15px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
+}
+
+.buttonBack:hover {
+  background-color: #ccc;
+}
+
+/* Título da página */
 .title {
-  font-size: 2rem;
-  font-weight: 600;
-  margin-bottom: 1.5rem;
-  color: #5d4037;
+  font-size: 1.8rem;
+  margin-bottom: 20px;
+  text-align: center;
 }
 
-.filters {
-  margin-bottom: 1.5rem;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.filters label {
-  font-weight: 600;
-  color: #5d4037;
-  font-size: 0.9rem;
-}
-
-.list {
+/* Lista de entregas */
+.lista {
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
-.card {
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 1rem 1.5rem;
-  margin-bottom: 1rem;
-  background-color: #fffefc;
-  box-shadow: 0 2px 4px rgba(93, 64, 55, 0.1);
-  transition: box-shadow 0.2s ease;
+/* Item da lista */
+.item {
+  background: #fff;
+  padding: 16px;
+  margin-bottom: 15px;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s ease;
 }
 
-.card:hover {
-  box-shadow: 0 4px 8px rgba(93, 64, 55, 0.2);
+.item:hover {
+  transform: translateY(-2px);
 }
 
-.cardHeader p {
-  margin: 0.3rem 0;
+/* Informações da entrega */
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.cardDetails {
-  margin-top: 1rem;
-  border-top: 1px solid #e0cfc7;
-  padding-top: 0.75rem;
-  font-size: 0.9rem;
-  color: #4e342e;
+/* Linha de cada informação com ícone e texto */
+.cardLinha {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
 }
 
-/* Badge padrão usado inline, mas pode definir aqui se quiser */
-.badge {
-  font-weight: 600;
-  text-transform: uppercase;
-  padding: 0.2rem 0.6rem;
-  border-radius: 6px;
+/* Linha de status */
+.statusLinha {
+  margin-top: 8px;
+  font-weight: bold;
+  color: #555;
+}
+
+/* Link do recibo */
+.link {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 6px 12px;
+  background-color: #f4a261;
   color: white;
-}
-
-.button {
-  margin-top: 2rem;
-  background-color: #5d4037;
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
   border-radius: 6px;
-  font-weight: 600;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background-color 0.25s ease;
+  font-size: 14px;
+  text-decoration: none;
+  transition: background-color 0.3s ease;
 }
 
-.button:hover {
-  background-color: #4a2f26;
+.link:hover {
+  background-color: #e76f51;
 }
 
-/* Spinner */
-.spinner {
-  width: 36px;
-  height: 36px;
-  border: 4px solid #e0cfc7;
-  border-top-color: #5d4037;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 3rem auto;
+/* Estados de carregamento e erro */
+.loading {
+  text-align: center;
+  padding: 20px;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+.error {
+  color: red;
+  text-align: center;
+  padding: 20px;
 }
+
+.empty {
+  text-align: center;
+  color: #777;
+  padding: 20px;
+}
+
+.statusLinha {
+  margin-top: 8px;
+  font-weight: bold;
+  color: #2a9d8f; /* Verde suave para indicar concluído */
+}
+
+.link {
+  background-color: #2a9d8f;
+}
+
+.link:hover {
+  background-color: #21867a;
+}
+
 
 /* Responsividade */
-
 @media (max-width: 600px) {
-  .card {
-    padding: 1rem;
+  .title {
+    font-size: 1.4rem;
   }
 
-  .filters {
-    flex-direction: column;
-    align-items: flex-start;
+  .cardLinha {
+    font-size: 13px;
+  }
+
+  .link {
+    font-size: 13px;
+    padding: 5px 10px;
   }
 }

@@ -1,241 +1,165 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
-import { useAuth } from '../../../context/AuthProvider';
-import { db } from '../../../firebase/firebaseClient';
-import { useRouter } from 'next/navigation';
-import styles from './historico.module.css';
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/context/AuthProvider'
+import { collection, query, where, getDocs, getFirestore, doc, getDoc } from 'firebase/firestore'
+import { app } from '@/firebase/firebaseClient'
+import {
+  FaMapMarkerAlt,
+  FaRoute,
+  FaStickyNote,
+  FaUser,
+  FaPhone,
+  FaRulerHorizontal,
+  FaClock,
+  FaDollarSign,
+} from 'react-icons/fa'
+import styles from './historico.module.css'
 
-const statusColors = {
-  entregue: '#4caf50', // verde
-  cancelado: '#e53935', // vermelho
-  ativo: '#fbc02d',     // amarelo (caso queira usar)
-};
+export default function HistoricoClientePage() {
+  const { user, loading } = useAuth()
+  const router = useRouter()
+  const firestore = getFirestore(app)
 
-export default function Historico() {
-  const { user, loading } = useAuth();
-  const router = useRouter();
-
-  const [pedidos, setPedidos] = useState([]);
-  const [error, setError] = useState('');
-  const [loadingPedidos, setLoadingPedidos] = useState(true);
-
-  // Filtros e ordenação
-  const [filtroStatus, setFiltroStatus] = useState('todos');
-  const [ordenacao, setOrdenacao] = useState('desc'); // desc = mais recentes primeiro
-
-  // Controla cards expandidos
-  const [expandedIds, setExpandedIds] = useState(new Set());
+  const [entregas, setEntregas] = useState([])
+  const [loadingData, setLoadingData] = useState(false)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     if (!loading && user) {
-      setLoadingPedidos(true);
-      const pedidosRef = collection(db, 'entregas');
+      setLoadingData(true)
+      setError(null)
 
-      let q;
+      const buscarEntregas = async () => {
+        try {
+          const q = query(
+            collection(firestore, 'entregas'),
+            where('clienteId', '==', user.uid),
+            where('status', '==', 'finalizada')
+          )
 
-      // Query adaptada com filtro de status
-      if (filtroStatus === 'todos') {
-        q = query(
-          pedidosRef,
-          where('clienteId', '==', user.uid),
-          where('status', 'in', ['entregue', 'cancelado']),
-          orderBy('dataEntrega', ordenacao)
-        );
-      } else {
-        q = query(
-          pedidosRef,
-          where('clienteId', '==', user.uid),
-          where('status', '==', filtroStatus),
-          orderBy('dataEntrega', ordenacao)
-        );
-      }
+          const snapshot = await getDocs(q)
+          const lista = []
 
-      const unsubscribe = onSnapshot(
-        q,
-        (snapshot) => {
-          const lista = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          setPedidos(lista);
-          setLoadingPedidos(false);
-          setError('');
-        },
-        (err) => {
-          console.error(err);
-          setError('Erro ao carregar histórico');
-          setLoadingPedidos(false);
+          for (const docEntrega of snapshot.docs) {
+            const entregaData = { id: docEntrega.id, ...docEntrega.data() }
+
+            // Buscar dados do motoboy
+            if (entregaData.motoboyId) {
+              const motoboyRef = doc(firestore, 'users', entregaData.motoboyId)
+              const motoboySnap = await getDoc(motoboyRef)
+              if (motoboySnap.exists()) {
+                const motoboyData = motoboySnap.data()
+                entregaData.nomeMotoboy = motoboyData.nome || '—'
+                entregaData.telefoneMotoboy = motoboyData.telefone || '—'
+              } else {
+                entregaData.nomeMotoboy = '—'
+                entregaData.telefoneMotoboy = '—'
+              }
+            }
+
+            lista.push(entregaData)
+          }
+
+          setEntregas(lista)
+        } catch (err) {
+          console.error(err)
+          setError('Erro ao buscar entregas.')
+        } finally {
+          setLoadingData(false)
         }
-      );
-
-      return () => unsubscribe();
-    }
-  }, [user, loading, filtroStatus, ordenacao]);
-
-  // Formata datas para português
-  const formatDate = (timestamp) => {
-    if (!timestamp) return '-';
-    let dateObj;
-    if (timestamp.toDate) {
-      dateObj = timestamp.toDate();
-    } else if (timestamp instanceof Date) {
-      dateObj = timestamp;
-    } else {
-      dateObj = new Date(timestamp);
-    }
-    return dateObj.toLocaleString('pt-BR', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  // Toggle para expandir / fechar card
-  const toggleExpand = (id) => {
-    setExpandedIds((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else {
-        newSet.add(id);
       }
-      return newSet;
-    });
-  };
 
-  if (loading || loadingPedidos) {
-    return (
-      <main className={styles.container}>
-        <div className={styles.spinner}></div>
-        <p>Carregando histórico...</p>
-      </main>
-    );
-  }
+      buscarEntregas()
+    }
+  }, [loading, user, firestore])
 
-  if (error) {
-    return (
-      <main className={styles.container}>
-        <p className={styles.error}>{error}</p>
-      </main>
-    );
-  }
-
-  if (pedidos.length === 0) {
-    return (
-      <main className={styles.container} style={{ textAlign: 'center' }}>
-        <h1 className={styles.title}>Histórico de Entregas</h1>
-        <p style={{ fontSize: '1.1rem', marginTop: '1rem', marginBottom: '2rem' }}>
-          Você ainda não possui entregas concluídas.
-        </p>
-        <button className={styles.button} onClick={() => router.push('/dashboard')}>
-          Voltar ao dashboard
-        </button>
-      </main>
-    );
-  }
+  if (loading) return <p className={styles.loading}>Carregando autenticação...</p>
+  if (!user) return <p className={styles.error}>Você precisa estar logado para ver o histórico.</p>
+  if (loadingData) return <p className={styles.loading}>Carregando histórico...</p>
+  if (error) return <p className={styles.error}>{error}</p>
+  if (entregas.length === 0) return <p className={styles.empty}>Nenhuma entrega finalizada encontrada.</p>
 
   return (
     <main className={styles.container}>
-      <h1 className={styles.title}>Histórico de Entregas</h1>
+      <button
+        type="button"
+        onClick={() => router.push('/dashboard')}
+        className={styles.buttonBack}
+      >
+        ← Voltar
+      </button>
 
-      {/* Filtros */}
-      <section className={styles.filters}>
-        <label>
-          Filtrar por status:{' '}
-          <select
-            value={filtroStatus}
-            onChange={(e) => setFiltroStatus(e.target.value)}
-            disabled={loadingPedidos}
-          >
-            <option value="todos">Todos</option>
-            <option value="entregue">Entregue</option>
-            <option value="cancelado">Cancelado</option>
-          </select>
-        </label>
+      <h1 className={styles.title}>Histórico de Entregas - Cliente</h1>
 
-        <label style={{ marginLeft: '1.5rem' }}>
-          Ordenar por data:{' '}
-          <select
-            value={ordenacao}
-            onChange={(e) => setOrdenacao(e.target.value)}
-            disabled={loadingPedidos}
-          >
-            <option value="desc">Mais recentes primeiro</option>
-            <option value="asc">Mais antigos primeiro</option>
-          </select>
-        </label>
-      </section>
-
-      {/* Lista de pedidos */}
-      <ul className={styles.list}>
-        {pedidos.map((pedido) => {
-          const isExpanded = expandedIds.has(pedido.id);
-          const corStatus = statusColors[pedido.status] || '#777';
-
-          return (
-            <li key={pedido.id} className={styles.card}>
-              <div
-                className={styles.cardHeader}
-                onClick={() => toggleExpand(pedido.id)}
-                style={{ cursor: 'pointer' }}
-                aria-expanded={isExpanded}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') toggleExpand(pedido.id);
-                }}
-              >
-                <p>
-                  <strong>Origem:</strong> {pedido.origem || '-'}
-                </p>
-                <p>
-                  <strong>Destino:</strong> {pedido.destino || '-'}
-                </p>
-                <p>
-                  <strong>Status:</strong>{' '}
-                  <span
-                    className={styles.badge}
-                    style={{
-                      backgroundColor: corStatus,
-                      color: 'white',
-                      padding: '0.2rem 0.6rem',
-                      borderRadius: '6px',
-                      textTransform: 'uppercase',
-                      fontWeight: '600',
-                      fontSize: '0.75rem',
-                    }}
-                  >
-                    {pedido.status}
-                  </span>
-                </p>
-                <p>
-                  <strong>Data de Entrega:</strong> {formatDate(pedido.dataEntrega)}
-                </p>
-                <p style={{ color: '#666', fontSize: '0.9rem', fontStyle: 'italic' }}>
-                  Clique para {isExpanded ? 'ocultar' : 'ver'} detalhes
-                </p>
+      <ul className={styles.lista}>
+        {entregas.map(entrega => (
+          <li key={entrega.id} className={styles.item}>
+            <div className={styles.info}>
+              <div className={styles.cardLinha}>
+                <FaMapMarkerAlt />
+                <strong>Origem:</strong> {entrega.origem}
               </div>
 
-              {isExpanded && (
-                <div className={styles.cardDetails}>
-                  <p>
-                    <strong>Descrição:</strong> {pedido.descricao || '-'}
-                  </p>
-                  <p>
-                    <strong>Motoboy ID:</strong> {pedido.motoboyId || '-'}
-                  </p>
-                  {/* Pode adicionar mais campos se quiser */}
-                </div>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+              <div className={styles.cardLinha}>
+                <FaRoute />
+                <strong>Destino:</strong> {entrega.destino}
+              </div>
 
-      <button className={styles.button} onClick={() => router.push('/dashboard')}>
-        Voltar ao dashboard
-      </button>
+              <div className={styles.cardLinha}>
+                <FaStickyNote />
+                <strong>Descrição:</strong> {entrega.descricao || '—'}
+              </div>
+
+              {/* Destinatário */}
+              <div className={styles.cardLinha}>
+                <FaUser />
+                <strong>Destinatário:</strong> {entrega.destinatario || '—'}
+              </div>
+
+              {/* Telefone do destinatário */}
+              <div className={styles.cardLinha}>
+                <FaPhone />
+                <strong>Telefone do destinatário:</strong> {entrega.telefoneDestinatario || '—'}
+              </div>
+
+              <div className={styles.cardLinha}>
+                <FaUser />
+                <strong>Motoboy:</strong> {entrega.nomeMotoboy || '—'}
+              </div>
+
+              <div className={styles.cardLinha}>
+                <FaPhone />
+                <strong>Telefone do Motoboy:</strong> {entrega.telefoneMotoboy || '—'}
+              </div>
+
+              <div className={styles.cardLinha}>
+                <FaRulerHorizontal />
+                <strong>Distância:</strong> {entrega.distanciaKm?.toFixed(2) || '0.00'} km
+              </div>
+
+              <div className={styles.cardLinha}>
+                <FaClock />
+                <strong>Tempo estimado:</strong> {Math.round(entrega.tempoMin) || 0} min
+              </div>
+
+              <div className={styles.cardLinha}>
+                <FaDollarSign />
+                <strong>Valor total:</strong> R$ {entrega.valorComMarkup?.toFixed(2) || '0.00'}
+              </div>
+
+              <div className={styles.statusLinha}>
+                <strong>Status:</strong> {entrega.status}
+              </div>
+
+              <a href={`/clientes/historico/recibo/${entrega.id}`} className={styles.link}>
+                Ver Recibo
+              </a>
+            </div>
+          </li>
+        ))}
+      </ul>
     </main>
-  );
+  )
 }
