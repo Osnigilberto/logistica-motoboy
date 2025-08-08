@@ -26,7 +26,6 @@ const navItems = {
     { href: '/clientes/motoboys', label: 'Motoboys', icon: <FiUsers /> },
     { href: '/clientes/nova-entrega', label: 'Nova Entrega', icon: <FiTruck /> },
     { href: '/clientes/pedidos-ativos', label: 'Pedidos Ativos', icon: <FiPackage /> },
-    { href: '/recibo', label: 'Meus Recibos', icon: <FiFileText /> },
 
   ],
   motoboy: [
@@ -34,7 +33,6 @@ const navItems = {
     { href: '/motoboy/entregas-em-andamento', label: 'Entregas em Andamento', icon: <FiClock /> },
     { href: '/motoboy/historico', label: 'Histórico', icon: <FiList /> },
     { href: '/motoboy/status', label: 'Status', icon: <FiCheckCircle /> },
-    { href: '/recibo', label: 'Meus Recibos', icon: <FiFileText /> },
 
   ],
 };

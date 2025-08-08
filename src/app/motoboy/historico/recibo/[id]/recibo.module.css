@@ -1,0 +1,173 @@
+/* Wrapper geral para centralizar no desktop */
+.pageWrapper {
+  display: flex;
+  justify-content: center; /* Centraliza horizontal */
+  align-items: center;     /* Centraliza vertical */
+  min-height: 100vh;
+  padding: 1rem;
+  background-color: #f9f9f9; /* opcional, pra destacar */
+}
+
+/* Card do recibo */
+.container {
+  max-width: 600px;
+  width: 100%;
+  padding: 1.5rem 1.2rem;
+  background-color: #fff;
+  border-radius: 14px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+
+/* Barra superior */
+.topBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 0.5rem;
+}
+
+/* Voltar */
+.buttonBack {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+.buttonBack:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+/* Botões de ação */
+.actionsInline {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: var(--color-accent);
+  color: white;
+  border: none;
+  padding: 0.65rem 1.1rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  border-radius: 50px; /* pill style */
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.3s ease;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+
+.button:hover {
+  background: var(--color-accent-dark);
+  transform: translateY(-1px);
+}
+
+.button:active {
+  transform: translateY(1px);
+}
+
+/* Título */
+.title {
+  text-align: center;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  margin: 1rem 0 1.3rem;
+}
+
+/* Informações do recibo */
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.cardLinha {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 1rem;
+  color: var(--color-text-secondary, #444);
+}
+
+.cardLinha svg {
+  color: var(--color-accent);
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.cardLinha strong {
+  min-width: 110px;
+  color: var(--color-accent-dark);
+}
+
+/* Adaptação natural sem media query */
+@supports (max-width: 100vw) {
+  .container {
+    margin: 0.5rem;
+    padding: 1rem;
+  }
+  .button {
+    padding: 0.55rem 0.9rem;
+    font-size: 0.9rem;
+  }
+  .title {
+    font-size: 1.2rem;
+  }
+}
+
+@media print {
+  /* Esconde elementos desnecessários */
+  .topBar,
+  .actionsInline,
+  .buttonBack,
+  .button {
+    display: none !important;
+  }
+
+  /* Ajusta o container para ocupar toda a largura da página impressa */
+  .container {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Fundo branco para o papel */
+ .pageWrapper {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  /* Ajusta as fontes para impressão */
+  .title {
+    color: #000 !important;
+    font-size: 1.5rem !important;
+  }
+
+  /* Ajusta espaçamentos */
+  .info {
+    gap: 0.6rem !important;
+  }
+
+  /* Remove ícones coloridos (opcional) */
+  .cardLinha svg {
+    color: #000 !important;
+  }
+}

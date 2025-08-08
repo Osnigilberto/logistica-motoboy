@@ -1,0 +1,162 @@
+.container {
+  max-width: 700px;
+  margin: 2rem auto;
+  padding: 1.5rem 2rem;
+  background-color: white;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);
+  color: var(--color-text);
+}
+
+/* Botão voltar */
+.buttonBack {
+  margin-bottom: 1.5rem;
+  background: transparent;
+  color: var(--color-accent-dark);
+  border: 2px solid var(--color-accent-dark);
+  padding: 0.5rem 1rem;
+  font-size: 0.95rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.buttonBack:hover {
+  background-color: var(--color-accent-dark);
+  color: white;
+}
+
+/* Título principal */
+.title {
+  color: var(--color-accent);
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  font-size: 1.5rem;
+}
+
+/* Lista do histórico */
+.lista {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* Cada item da lista */
+.item {
+  border-bottom: 1px solid var(--color-border);
+  padding: 1rem 0;
+  display: flex;
+  flex-direction: column; /* muda para coluna para exibir todas infos */
+  align-items: flex-start;
+  gap: 0.8rem;
+}
+
+.item:last-child {
+  border-bottom: none;
+}
+
+/* Container das informações da entrega */
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  width: 100%;
+}
+
+/* Cada linha com ícone e texto */
+.cardLinha {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 1rem;
+  color: var(--color-text-secondary, #444);
+}
+
+.cardLinha svg {
+  color: var(--color-accent);
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.cardLinha strong {
+  min-width: 110px;
+  color: var(--color-accent-dark);
+  font-weight: 600;
+}
+
+/* Linha do status */
+.statusLinha {
+  margin-top: 0.5rem;
+  font-weight: 600;
+  color: var(--color-accent-dark);
+}
+
+/* Link para o recibo */
+.link {
+  color: var(--color-accent);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s ease;
+  margin-top: 0.8rem;
+  align-self: flex-start; /* para ficar alinhado à esquerda */
+}
+
+.link:hover {
+  color: var(--color-accent-dark);
+}
+
+/* Mensagens de loading e vazio */
+.loading,
+.empty,
+.error {
+  text-align: center;
+  color: var(--color-muted);
+  margin-top: 2rem;
+  font-style: italic;
+}
+
+/* Para telas até 768px (tablets e celulares em paisagem) */
+@media (max-width: 768px) {
+  .container {
+    max-width: 95%;
+    padding: 1rem 1.2rem;
+    margin: 1rem auto;
+  }
+
+  .title {
+    font-size: 1.4rem;
+    margin-bottom: 1rem;
+  }
+
+  .item {
+    padding: 0.8rem 0;
+    gap: 0.6rem;
+  }
+}
+
+/* Para telas muito pequenas, até 480px (smartphones em modo retrato) */
+@media (max-width: 480px) {
+  .container {
+    padding: 0.8rem 1rem;
+    margin: 0.8rem auto;
+  }
+
+  .title {
+    font-size: 1.2rem;
+  }
+
+  .cardLinha {
+    font-size: 0.9rem;
+  }
+
+  .link {
+    font-size: 0.9rem;
+  }
+
+  .buttonBack {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+  }
+}

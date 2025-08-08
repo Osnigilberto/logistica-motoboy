@@ -206,7 +206,7 @@ export default function PaginaEntregaEmAndamento() {
         atualizadoEm: serverTimestamp(),
       })
       toast.success(`Entrega finalizada! XP ganho: ${xpGanho.toFixed(1)}, Nível atual: ${novoNivel}`)
-      router.push(`/recibo/${entrega.id}`)
+      router.push(`/motoboy/historico/recibo/${entrega.id}`)
     } catch (error) {
       toast.error('Erro ao finalizar entrega.')
       console.error(error)
