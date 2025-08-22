@@ -57,6 +57,7 @@ export function AuthProvider({ children }) {
     setUser(null);
     setProfile(null);
     router.push('/');
+    router.refresh();
   };
 
   const fetchProfile = async (uid) => {

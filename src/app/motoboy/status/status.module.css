@@ -1,4 +1,3 @@
-/* Container principal da página */
 .container {
   max-width: 480px;
   margin: 24px auto;
@@ -7,7 +6,6 @@
   color: var(--color-text);
 }
 
-/* Botão Voltar */
 .buttonBack {
   background-color: var(--color-accent);
   border: none;
@@ -26,7 +24,6 @@
   background-color: var(--color-accent-dark);
 }
 
-/* Perfil do motoboy */
 .perfil {
   text-align: center;
   padding: 20px 0;
@@ -46,36 +43,10 @@
 
 .nome {
   font-size: 1.8rem;
-  margin-bottom: 4px;
+  margin-bottom: 16px;
   color: var(--color-accent-dark);
 }
 
-.dadosXp {
-  font-size: 1rem;
-  color: var(--color-muted);
-  margin-bottom: 16px;
-  font-weight: 600;
-}
-
-/* Barra de XP */
-.progressBar {
-  width: 100%;
-  height: 18px;
-  background: var(--color-border);
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.2);
-  margin: 0 auto 24px;
-}
-
-.progress {
-  height: 100%;
-  background: linear-gradient(90deg, var(--color-accent), var(--color-accent-dark));
-  border-radius: 12px 0 0 12px;
-  transition: width 1.2s ease-in-out;
-}
-
-/* Container das medalhas */
 .medalhasContainer {
   display: flex;
   flex-wrap: wrap;
@@ -83,7 +54,6 @@
   justify-content: center;
 }
 
-/* Card de cada medalha */
 .medalhaCard {
   background: var(--color-bg);
   border: 1.8px solid var(--color-accent);
@@ -100,19 +70,16 @@
   transition: transform 0.25s ease, box-shadow 0.25s ease;
   min-width: 180px;
 }
-
 .medalhaCard:hover {
   transform: scale(1.07);
   box-shadow: 0 6px 12px rgb(0 0 0 / 0.15);
 }
 
-/* Ícone da medalha */
 .medalhaIcon {
   color: var(--color-accent);
   font-size: 1.3rem;
 }
 
-/* Texto para quando não há medalhas */
 .semMedalhas {
   font-style: italic;
   color: var(--color-muted);
@@ -121,7 +88,6 @@
   width: 100%;
 }
 
-/* Estatísticas da semana */
 .estatisticas {
   margin-top: 28px;
   background-color: var(--color-bg);
@@ -133,7 +99,6 @@
   gap: 12px;
 }
 
-/* Cada cartão de estatística */
 .statCard {
   display: flex;
   align-items: center;
@@ -143,12 +108,10 @@
   font-size: 1.1rem;
 }
 
-/* Ícones dentro dos cartões */
 .statCard svg {
   color: var(--color-accent);
 }
 
-/* Container para loading */
 .loadingContainer {
   height: 300px;
   display: flex;
@@ -159,7 +122,6 @@
   font-style: italic;
 }
 
-/* Responsividade */
 @media (min-width: 480px) {
   .estatisticas {
     grid-template-columns: 1fr 1fr;

@@ -33,7 +33,6 @@ export default function EntregasDisponiveis() {
     if (user) {
       async function fetchEntregasDisponiveis() {
         setLoadingData(true);
-
         try {
           const vinculosRef = collection(db, 'vinculos');
           const vinculosQuery = query(
@@ -44,7 +43,6 @@ export default function EntregasDisponiveis() {
           const vinculosSnapshot = await getDocs(vinculosQuery);
 
           const clienteIds = vinculosSnapshot.docs.map(doc => doc.data().clienteId);
-
           if (clienteIds.length === 0) {
             setEntregas([]);
             setLoadingData(false);
@@ -52,7 +50,6 @@ export default function EntregasDisponiveis() {
           }
 
           const entregasRef = collection(db, 'entregas');
-
           const chunks = [];
           for (let i = 0; i < clienteIds.length; i += 10) {
             chunks.push(clienteIds.slice(i, i + 10));
@@ -67,7 +64,6 @@ export default function EntregasDisponiveis() {
               where('motoboyId', '==', '')
             );
             const entregasSnapshot = await getDocs(entregasQuery);
-
             entregasTemp = entregasTemp.concat(
               entregasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
             );
@@ -77,7 +73,6 @@ export default function EntregasDisponiveis() {
         } catch (error) {
           toast.error('Erro ao carregar entregas disponíveis');
         }
-
         setLoadingData(false);
       }
 
@@ -103,7 +98,6 @@ export default function EntregasDisponiveis() {
 
   async function aceitarEntrega(entregaId) {
     setAceitandoId(entregaId);
-
     const podeAceitar = await podeAceitarMaisEntregas();
 
     if (!podeAceitar) {
@@ -114,7 +108,6 @@ export default function EntregasDisponiveis() {
 
     try {
       const entregaRef = doc(db, 'entregas', entregaId);
-
       await updateDoc(entregaRef, {
         motoboyId: user.uid,
         status: 'em andamento',
@@ -122,12 +115,10 @@ export default function EntregasDisponiveis() {
       });
 
       toast.success('Entrega aceita com sucesso!');
-
       setEntregas(prev => prev.filter(e => e.id !== entregaId));
     } catch (error) {
       toast.error('Erro ao aceitar a entrega. Tente novamente.');
     }
-
     setAceitandoId(null);
   }
 
@@ -144,7 +135,6 @@ export default function EntregasDisponiveis() {
     return (
       <main className={styles.container}>
         <h1 className={styles.title}>Entregas Disponíveis</h1>
-
         <button
           type="button"
           onClick={() => router.back()}
@@ -152,7 +142,6 @@ export default function EntregasDisponiveis() {
         >
           ← Voltar
         </button>
-
         <p>Não há entregas disponíveis no momento.</p>
       </main>
     );
@@ -171,17 +160,27 @@ export default function EntregasDisponiveis() {
       </button>
 
       <ul className={styles.list} aria-live="polite">
-        {entregas.map((entrega) => (
-          <li
-            key={entrega.id}
-            className={styles.item}
-            tabIndex={0}
-            aria-label={`Entrega ${entrega.id}`}
-          >
+        {entregas.map(entrega => (
+          <li key={entrega.id} className={styles.item} tabIndex={0} aria-label={`Entrega ${entrega.id}`}>
             <p><strong>ID:</strong> {entrega.id}</p>
             <p><strong>Descrição:</strong> {entrega.descricao || '—'}</p>
             <p><strong>Origem:</strong> {entrega.origem || entrega.origemTexto || '—'}</p>
-            <p><strong>Destino:</strong> {entrega.destino || entrega.destinoTexto || '—'}</p>
+
+            <p><strong>Paradas:</strong></p>
+            <div className={styles.paradasWrapper}>
+              {entrega.destinos && entrega.destinos.length > 0 ? (
+                entrega.destinos.map((endereco, i) => (
+                  <div key={i} className={styles.paradaItem}>
+                    <p>📍 {endereco}</p>
+                    <p><strong>Destinatário:</strong> {entrega.destinatarios?.[i]?.nome || '—'}</p>
+                    <p><strong>Telefone:</strong> {entrega.destinatarios?.[i]?.telefone || '—'}</p>
+                  </div>
+                ))
+              ) : (
+                <p>—</p>
+              )}
+            </div>
+
             <p><strong>Status:</strong> {entrega.status || '—'}</p>
             <p>
               <strong>Valor que você receberá:</strong>{' '}
@@ -189,8 +188,7 @@ export default function EntregasDisponiveis() {
                 ? `R$ ${entrega.valorMotoboy.toFixed(2)}`
                 : '—'}
             </p>
-            <p><strong>Destinatário:</strong> {entrega.destinatario || entrega.contatoEntrega?.nome || '—'}</p>
-            <p><strong>Telefone:</strong> {entrega.telefoneDestinatario || entrega.contatoEntrega?.telefone || '—'}</p>
+
             <p>
               <strong>Distância:</strong>{' '}
               {typeof entrega.distanciaKm === 'number' && !isNaN(entrega.distanciaKm)
@@ -203,6 +201,7 @@ export default function EntregasDisponiveis() {
                 ? `${Math.round(entrega.tempoMin)} min`
                 : '—'}
             </p>
+
             <button
               className={styles.button}
               onClick={() => aceitarEntrega(entrega.id)}

@@ -24,6 +24,20 @@
   padding: 0;
   margin-top: 1rem;
 }
+.paradasWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.paradaItem {
+  background-color: #f9f9f9;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border-left: 3px solid #FF9800; /* laranja para destacar paradas em andamento */
+}
+
 
 .card {
   background-color: #fff;

@@ -1,13 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   FiMenu,
   FiX,
-  FiFileText,
-  FiLogOut,
   FiList,
   FiUsers,
   FiTruck,
@@ -16,6 +14,7 @@ import {
   FiClock,
   FiCheckCircle,
   FiUser,
+  FiLogOut,
 } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthProvider';
 import styles from './DashboardLayout.module.css';
@@ -26,28 +25,35 @@ const navItems = {
     { href: '/clientes/motoboys', label: 'Motoboys', icon: <FiUsers /> },
     { href: '/clientes/nova-entrega', label: 'Nova Entrega', icon: <FiTruck /> },
     { href: '/clientes/pedidos-ativos', label: 'Pedidos Ativos', icon: <FiPackage /> },
-
   ],
   motoboy: [
     { href: '/motoboy/entregas-disponiveis', label: 'Entregas Disponíveis', icon: <FiActivity /> },
     { href: '/motoboy/entregas-em-andamento', label: 'Entregas em Andamento', icon: <FiClock /> },
     { href: '/motoboy/historico', label: 'Histórico', icon: <FiList /> },
     { href: '/motoboy/status', label: 'Status', icon: <FiCheckCircle /> },
-
   ],
 };
 
 export default function DashboardLayout({ children, userType = 'cliente' }) {
-  const { logout } = useAuth();
+  const { user, loading, logout } = useAuth();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const links = navItems[userType] || [];
 
+  // Redireciona para home se o usuário fizer logout
   const handleLogout = async () => {
-    await logout();
-    router.push('/login');
+    try {
+      await logout();          // chama signOut do Firebase
+      setMenuOpen(false);      // fecha menu se estiver aberto
+      router.replace('/');     // redireciona para src/app/page.jsx
+    } catch (error) {
+      console.error('Erro ao sair:', error);
+    }
   };
+
+  // Evita renderização se ainda estiver carregando user
+  if (loading) return null;
 
   return (
     <div className={styles.layout}>
@@ -60,7 +66,10 @@ export default function DashboardLayout({ children, userType = 'cliente' }) {
 
       {/* Overlay para mobile */}
       {menuOpen && (
-        <div className={`${styles.overlay} ${styles.open}`} onClick={() => setMenuOpen(false)} />
+        <div
+          className={`${styles.overlay} ${styles.open}`}
+          onClick={() => setMenuOpen(false)}
+        />
       )}
 
       {/* Sidebar */}
@@ -74,7 +83,6 @@ export default function DashboardLayout({ children, userType = 'cliente' }) {
                 <span>{item.label}</span>
               </Link>
             ))}
-            {/* Novo botão: Editar Perfil */}
             <Link href="/dashboard/editar-perfil" className={styles.navLink}>
               <FiUser />
               <span>Editar Perfil</span>

@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { doc, getDoc } from "firebase/firestore"
-import { db } from "@/firebase/firebaseClient"
+import { doc, getDoc, getFirestore } from "firebase/firestore"
 import {
   FaMapMarkerAlt,
   FaRoute,
@@ -14,12 +13,12 @@ import {
   FaClock,
   FaDollarSign,
 } from "react-icons/fa"
-import Image from "next/image"
 import styles from "./recibo.module.css"
 
 export default function ReciboMotoboyPage() {
   const { id } = useParams()
   const router = useRouter()
+  const firestore = getFirestore()
   const [entrega, setEntrega] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -31,7 +30,7 @@ export default function ReciboMotoboyPage() {
       setLoading(true)
       setError(null)
       try {
-        const docRef = doc(db, "entregas", id)
+        const docRef = doc(firestore, "entregas", id)
         const docSnap = await getDoc(docRef)
         if (docSnap.exists()) {
           setEntrega(docSnap.data())
@@ -47,18 +46,17 @@ export default function ReciboMotoboyPage() {
     }
 
     fetchEntrega()
-  }, [id])
+  }, [id, firestore])
 
-  const handlePrint = () => {
-    window.print()
-  }
+  const handlePrint = () => window.print()
 
   const handleShare = () => {
+    if (!entrega) return
     if (navigator.share) {
       navigator
         .share({
           title: 'Comprovante de Entrega',
-          text: `Comprovante da entrega de ${entrega.origem} para ${entrega.destino}`,
+          text: `Comprovante da entrega de ${entrega.origem} para ${entrega.destinos?.join(', ')}`,
           url: window.location.href,
         })
         .catch((error) => console.error('Erro ao compartilhar:', error))
@@ -70,45 +68,58 @@ export default function ReciboMotoboyPage() {
   if (loading) return <p>Carregando dados da entrega...</p>
   if (error) return <p>{error}</p>
 
- return (
-<div className={styles.pageWrapper}>
-  <div className={styles.container}>
-    {/* Linha com voltar à esquerda e ações à direita */}
-    <div className={styles.topBar}>
-      <button
-        type="button"
-        onClick={() => router.push('/motoboy/historico')}
-        className={styles.buttonBack}
-      >
-        ← Voltar
-      </button>
+  return (
+    <div className={styles.pageWrapper}>
+      <div className={styles.container}>
+        {/* Top bar com voltar e ações */}
+        <div className={styles.topBar}>
+          <button type="button" onClick={() => router.push('/motoboy/historico')} className={styles.buttonBack}>
+            ← Voltar
+          </button>
 
-      <div className={styles.actionsInline}>
-        <button type="button" onClick={handlePrint} className={styles.button}>
-          🖨️ Imprimir
-        </button>
-        <button type="button" onClick={handleShare} className={styles.button}>
-          📤 Compartilhar
-        </button>
+          <div className={styles.actionsInline}>
+            <button type="button" onClick={handlePrint} className={styles.button}>
+              🖨️ Imprimir
+            </button>
+            <button type="button" onClick={handleShare} className={styles.button}>
+              📤 Compartilhar
+            </button>
+          </div>
+        </div>
+
+        <h1 className={styles.title}>Comprovante de Entrega</h1>
+
+        {/* Informações principais */}
+        <div className={styles.info}>
+          <div className={styles.cardLinha}><FaMapMarkerAlt /> <strong>Origem:</strong> {entrega.origem}</div>
+          <div className={styles.cardLinha}><FaRoute /> <strong>Destinos:</strong> {entrega.destinos?.join(', ')}</div>
+          <div className={styles.cardLinha}><FaStickyNote /> <strong>Descrição:</strong> {entrega.descricao || '—'}</div>
+
+          {entrega.destinatarios?.map((d, i) => (
+            <div key={i} className={styles.cardLinha}>
+              <FaUser /> <strong>Destinatário {i + 1}:</strong> {d.nome} | <FaPhone /> {d.telefone}
+            </div>
+          ))}
+
+          <div className={styles.cardLinha}><FaRulerHorizontal /> <strong>Distância:</strong> {entrega.distanciaKm?.toFixed(2) || '0.00'} km</div>
+          <div className={styles.cardLinha}><FaClock /> <strong>Tempo estimado:</strong> {Math.round(entrega.tempoMin) || 0} min</div>
+          <div className={styles.cardLinha}><FaDollarSign /> <strong>Valor recebido:</strong> R$ {entrega.valorMotoboy?.toFixed(2) || '0.00'}</div>
+
+          {/* Histórico da rota percorrida */}
+          {entrega.caminhoPercorrido?.length > 0 && (
+            <div className={styles.cardLinha}>
+              <strong>Rota percorrida:</strong>
+              <ul className={styles.caminhoList}>
+                {entrega.caminhoPercorrido.map((p, idx) => (
+                  <li key={idx}>
+                    Lat: {p.lat.toFixed(5)}, Lng: {p.lng.toFixed(5)}, {new Date(p.timestamp?.seconds * 1000).toLocaleString()}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
       </div>
     </div>
-
-    {/* Título centralizado */}
-    <h1 className={styles.title}>Comprovante de Entrega</h1>
-
-    {/* Informações do recibo */}
-    <div className={styles.info}>
-      <div className={styles.cardLinha}><FaMapMarkerAlt /><strong>Origem:</strong> {entrega.origem}</div>
-      <div className={styles.cardLinha}><FaRoute /><strong>Destino:</strong> {entrega.destino}</div>
-      <div className={styles.cardLinha}><FaStickyNote /><strong>Descrição:</strong> {entrega.descricao || '—'}</div>
-      <div className={styles.cardLinha}><FaUser /><strong>Destinatário:</strong> {entrega.destinatario || '—'}</div>
-      <div className={styles.cardLinha}><FaPhone /><strong>Telefone:</strong> {entrega.telefoneDestinatario || '—'}</div>
-      <div className={styles.cardLinha}><FaRulerHorizontal /><strong>Distância:</strong> {entrega.distanciaKm?.toFixed(2) || '0.00'} km</div>
-      <div className={styles.cardLinha}><FaClock /><strong>Tempo estimado:</strong> {Math.round(entrega.tempoMin) || 0} min</div>
-      <div className={styles.cardLinha}><FaDollarSign /><strong>Valor para você:</strong> R$ {entrega.valorMotoboy?.toFixed(2) || '0.00'}</div>
-    </div>
-  </div>
-</div>
-
   )
 }

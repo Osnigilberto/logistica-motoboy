@@ -113,12 +113,26 @@ export default function PedidosAtivos() {
               </span>
               <span className={styles.date}>{formatDate(entrega.criadoEm)}</span>
             </div>
+
             <div className={styles.cardBody}>
-              <p><strong>Destinatário:</strong> {entrega.destinatario || '-'}</p>
-              <p><strong>Telefone:</strong> {entrega.telefoneDestinatario || '-'}</p>
               <p><strong>Origem:</strong> {entrega.origem || '-'}</p>
-              <p><strong>Destino:</strong> {entrega.destino || '-'}</p>
-              <p><strong>Descrição:</strong> {entrega.descricao || '—'}</p>
+
+              <p><strong>Paradas:</strong></p>
+              <div className={styles.paradasWrapper}>
+                {entrega.destinos && entrega.destinos.length > 0 ? (
+                  entrega.destinos.map((endereco, i) => (
+                    <div key={i} className={styles.paradaItem}>
+                      <p>📍 {endereco}</p>
+                      <p><strong>Destinatário:</strong> {entrega.destinatarios?.[i]?.nome || '-'}</p>
+                      <p><strong>Telefone:</strong> {entrega.destinatarios?.[i]?.telefone || '-'}</p>
+                    </div>
+                  ))
+                ) : (
+                  <p>-</p>
+                )}
+              </div>
+
+              <p><strong>Descrição:</strong> {entrega.descricao || '-'}</p>
             </div>
           </li>
         ))}

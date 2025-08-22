@@ -8,115 +8,122 @@ import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { FaMapMarkerAlt, FaClock, FaMoneyBillWave } from 'react-icons/fa';
 import MapaEntrega from '@/app/components/MapaEntrega';
 import styles from './novaEntrega.module.css';
-
-import VMasker from 'vanilla-masker'; // Importa a biblioteca de máscara
+import VMasker from 'vanilla-masker';
 
 export default function NovaEntregaPage() {
   const router = useRouter();
   const [userId, setUserId] = useState(null);
 
-  // Formulário básico (origem, destino, descrição)
-  const [form, setForm] = useState({
-    origem: '',
-    destino: '',
-    descricao: '',
-  });
+  const [form, setForm] = useState({ origem: '', descricao: '' });
 
-  // Nome e telefone do destinatário
-  const [destinatario, setDestinatario] = useState('');
-  const [telefoneDestinatario, setTelefoneDestinatario] = useState('');
+  // Mantemos a lista de destinos para cálculo/mapa
+  const [destinos, setDestinos] = useState(['']); // apenas endereços
+  // Cada destino agora pode ter seu próprio destinatário/telefone
+  const [destinatarios, setDestinatarios] = useState([{ nome: '', telefone: '' }]);
 
-  // Dados calculados da rota
   const [distanciaKm, setDistanciaKm] = useState(null);
   const [tempoMin, setTempoMin] = useState(null);
-  const [custo, setCusto] = useState(null);
 
-  // Controle de loading e erros
+  const [valorCliente, setValorCliente] = useState(null);
+  const [valorMotoboy, setValorMotoboy] = useState(null);
+  const [valorPlataforma, setValorPlataforma] = useState(null);
+
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState('');
 
-  // Carrega usuário logado e redireciona se não estiver logado
+  // Autenticação
   useEffect(() => {
     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setUserId(user.uid);
-      } else {
-        router.push('/login');
-      }
+      if (user) setUserId(user.uid);
+      else router.push('/login');
     });
     return () => unsubscribe();
   }, [router]);
 
-  // Aplica máscara automática no telefone (formato brasileiro)
-  const aplicarMascaraTelefone = (valor) => {
-    // Remove tudo que não for número e aplica máscara
-    return VMasker.toPattern(valor.replace(/\D/g, ''), '(99) 99999-9999');
-  };
+  const aplicarMascaraTelefone = (valor) =>
+    VMasker.toPattern(valor.replace(/\D/g, ''), '(99) 99999-9999');
 
-  // Atualiza formulário genérico (origem, destino, descrição)
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  // Submete o formulário, validando campos e salvando no Firestore
+  // Destinos múltiplos
+  const handleDestinoChange = (index, value) => {
+    const novosDestinos = [...destinos];
+    novosDestinos[index] = value;
+    setDestinos(novosDestinos);
+  };
+
+  const adicionarDestino = () => {
+    setDestinos([...destinos, '']);
+    setDestinatarios([...destinatarios, { nome: '', telefone: '' }]);
+  };
+
+  const removerDestino = (index) => {
+    setDestinos(destinos.filter((_, i) => i !== index));
+    setDestinatarios(destinatarios.filter((_, i) => i !== index));
+  };
+
+  const handleDestinatarioChange = (index, campo, valor) => {
+    const novos = [...destinatarios];
+    novos[index][campo] = valor;
+    setDestinatarios(novos);
+  };
+
+  // Recalcula valores sempre que distância ou destinos mudam
+  useEffect(() => {
+    if (!distanciaKm) return;
+    const taxaParadas = destinos.length > 1 ? (destinos.length - 1) * 3.0 : 0;
+    const cliente = distanciaKm * 1.7 + taxaParadas;
+    const motoboy = distanciaKm * 1.5 + taxaParadas;
+    const plataforma = cliente - motoboy;
+    setValorCliente(cliente);
+    setValorMotoboy(motoboy);
+    setValorPlataforma(plataforma);
+  }, [distanciaKm, destinos]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Valida campos obrigatórios
-    if (
-      !form.origem ||
-      !form.destino ||
-      !form.descricao ||
-      !destinatario ||
-      !telefoneDestinatario
-    ) {
-      setErro('Preencha todos os campos.');
+    // Validação: todos os destinos e destinatários preenchidos
+    for (let i = 0; i < destinos.length; i++) {
+      if (!destinos[i] || !destinatarios[i].nome || !destinatarios[i].telefone) {
+        setErro('Preencha todos os campos de todos os destinos.');
+        return;
+      }
+    }
+
+    if (!form.origem || !form.descricao) {
+      setErro('Preencha todos os campos obrigatórios.');
       return;
     }
 
-    // Valida dados da rota calculada
-    if (!distanciaKm || !tempoMin || !custo) {
-      setErro('Rota inválida ou incompleta. Corrija os endereços.');
+    if (!distanciaKm || !tempoMin || !valorCliente) {
+      setErro('Rota inválida ou incompleta.');
       return;
     }
 
     setLoading(true);
     setErro('');
-
     try {
-      // Cálculos financeiros com base em níveis
-      const markup = 1.18; // 18% de markup sobre o custo
-      const valorComMarkup = custo * markup;
-
-      // Define percentual do motoboy conforme custo (simulando níveis)
-      let percentualMotoboy = 0.7; // padrão: 70%
-      if (custo <= 5) {
-        percentualMotoboy = 0.5;
-      } else if (custo <= 10) {
-        percentualMotoboy = 0.65;
-      }
-
-      const valorMotoboy = valorComMarkup * percentualMotoboy;
-      const valorPlataforma = valorComMarkup - valorMotoboy;
-
-      // Salva entrega no Firestore
       await addDoc(collection(db, 'entregas'), {
         clienteId: userId,
         origem: form.origem.trim(),
-        destino: form.destino.trim(),
+        destinos: destinos.map((d) => d.trim()),
+        destinatarios: destinatarios.map((d) => ({
+          nome: d.nome.trim(),
+          telefone: d.telefone.trim(),
+        })),
         descricao: form.descricao.trim(),
-        destinatario: destinatario.trim(),
-        telefoneDestinatario: telefoneDestinatario.trim(),
         distanciaKm,
         tempoMin,
-        custo,
-        valorComMarkup,
+        valorCliente,
         valorMotoboy,
         valorPlataforma,
-        percentualMotoboy, // opcional para referência
+        paradas: destinos.length,
         status: 'ativo',
-        motoboyId: '', // ainda sem motoboy vinculado
+        motoboyId: '',
         criadoEm: serverTimestamp(),
       });
       router.push('/dashboard');
@@ -130,48 +137,13 @@ export default function NovaEntregaPage() {
 
   return (
     <main className={styles.container}>
-      {/* Botão de voltar */}
-      <button
-        type="button"
-        onClick={() => router.back()}
-        className={styles.buttonBack}
-      >
+      <button type="button" onClick={() => router.back()} className={styles.buttonBack}>
         ← Voltar
       </button>
 
       <h1 className={styles.title}>Nova Entrega</h1>
 
       <form onSubmit={handleSubmit} className={styles.form}>
-        {/* Nome do destinatário */}
-        <label className={styles.label}>
-          Nome do destinatário:
-          <input
-            type="text"
-            className={styles.input}
-            value={destinatario}
-            onChange={(e) => setDestinatario(e.target.value)}
-            required
-            disabled={loading}
-          />
-        </label>
-
-        {/* Telefone do destinatário com máscara */}
-        <label className={styles.label}>
-          Telefone do destinatário:
-          <input
-            type="tel"
-            className={styles.input}
-            value={telefoneDestinatario}
-            onChange={(e) =>
-              setTelefoneDestinatario(aplicarMascaraTelefone(e.target.value))
-            }
-            placeholder="(00) 00000-0000"
-            required
-            disabled={loading}
-          />
-        </label>
-
-        {/* Origem */}
         <label className={styles.label}>
           Origem
           <input
@@ -186,22 +158,52 @@ export default function NovaEntregaPage() {
           />
         </label>
 
-        {/* Destino */}
-        <label className={styles.label}>
-          Destino
-          <input
-            type="text"
-            name="destino"
-            value={form.destino}
-            onChange={handleChange}
-            className={styles.input}
-            placeholder="Endereço de destino"
-            required
-            disabled={loading}
-          />
-        </label>
+        {/* Destinos + Destinatários */}
+        {destinos.map((dest, index) => (
+          <div key={index} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+            <input
+              type="text"
+              placeholder={`Destino ${index + 1}`}
+              value={dest}
+              onChange={(e) => handleDestinoChange(index, e.target.value)}
+              className={styles.input}
+              required
+              disabled={loading}
+            />
+            <input
+              type="text"
+              placeholder="Destinatário"
+              value={destinatarios[index].nome}
+              onChange={(e) => handleDestinatarioChange(index, 'nome', e.target.value)}
+              className={styles.input}
+              required
+              disabled={loading}
+            />
+            <input
+              type="tel"
+              placeholder="Telefone"
+              value={destinatarios[index].telefone}
+              onChange={(e) => handleDestinatarioChange(index, 'telefone', aplicarMascaraTelefone(e.target.value))}
+              className={styles.input}
+              required
+              disabled={loading}
+            />
+            {index > 0 && (
+              <button type="button" onClick={() => removerDestino(index)} disabled={loading}>
+                ❌
+              </button>
+            )}
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={adicionarDestino}
+          disabled={loading}
+          className={styles.buttonSecondary}
+        >
+          + Adicionar parada
+        </button>
 
-        {/* Descrição */}
         <label className={styles.label}>
           Descrição
           <textarea
@@ -215,61 +217,35 @@ export default function NovaEntregaPage() {
           />
         </label>
 
-        {/* Mensagem de erro */}
         {erro && <p className={styles.error}>{erro}</p>}
 
-        {/* Informações da rota e valores calculados */}
-        {distanciaKm && tempoMin && custo && (
+        {distanciaKm && tempoMin && valorCliente && (
           <div className={styles.info}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <FaMapMarkerAlt />
-              <span><strong>Distância estimada:</strong> {distanciaKm.toFixed(2)} km</span>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <FaClock />
-              <span><strong>Tempo de entrega:</strong> {tempoMin.toFixed(0)} minutos</span>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <FaMoneyBillWave />
-              <span><strong>Valor base:</strong> R$ {custo.toFixed(2)}</span>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <FaMoneyBillWave />
-              <span><strong>Taxas e operação:</strong> R$ {(custo * 0.18).toFixed(2)}</span>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <FaMoneyBillWave />
-              <span><strong>Valor total:</strong> R$ {(custo * 1.18).toFixed(2)}</span>
-            </div>
+            <div><FaMapMarkerAlt /> <strong>Distância:</strong> {distanciaKm.toFixed(2)} km</div>
+            <div><FaClock /> <strong>Tempo estimado:</strong> {tempoMin.toFixed(0)} min</div>
+            <div><FaMoneyBillWave /> <strong>Total Cliente:</strong> R$ {valorCliente.toFixed(2)}</div>
+            <div><FaMoneyBillWave /> <strong>Motoboy recebe:</strong> R$ {valorMotoboy.toFixed(2)}</div>
+            <div><FaMoneyBillWave /> <strong>Plataforma:</strong> R$ {valorPlataforma.toFixed(2)}</div>
+            {destinos.length > 1 && <div><FaMoneyBillWave /> <strong>Taxa de paradas:</strong> R$ {(destinos.length - 1) * 3}</div>}
           </div>
         )}
 
-        {/* Botão de enviar */}
         <div className={styles.buttons}>
-          <button
-            type="submit"
-            disabled={loading || !distanciaKm || !tempoMin || !custo}
-            className={styles.buttonPrimary}
-          >
+          <button type="submit" disabled={loading || !distanciaKm || !tempoMin || !valorCliente} className={styles.buttonPrimary}>
             {loading ? 'Criando...' : 'Criar Entrega'}
           </button>
         </div>
       </form>
 
-      {/* Mapa da rota (exibe se origem e destino estiverem preenchidos) */}
-      {form.origem && form.destino && (
+      {/* Mapa */}
+      {form.origem && destinos.length > 0 && (
         <div className={styles.mapaWrapper}>
           <MapaEntrega
             origem={form.origem}
-            destino={form.destino}
-            onInfoChange={({ distanciaKm, tempoMin, custo }) => {
+            destinos={destinos}
+            onInfoChange={({ distanciaKm, tempoMin }) => {
               setDistanciaKm(distanciaKm);
               setTempoMin(tempoMin);
-              setCusto(custo);
               setErro('');
             }}
           />

@@ -4,23 +4,13 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthProvider'
 import { collection, query, where, getDocs, getFirestore } from 'firebase/firestore'
-import { app } from '@/firebase/firebaseClient'
-import {
-  FaMapMarkerAlt,
-  FaRoute,
-  FaStickyNote,
-  FaUser,
-  FaPhone,
-  FaRulerHorizontal,
-  FaClock,
-  FaDollarSign,
-} from 'react-icons/fa'
+import { FaMapMarkerAlt, FaRoute, FaStickyNote, FaUser, FaPhone, FaClock, FaDollarSign } from 'react-icons/fa'
 import styles from './historico.module.css'
 
 export default function HistoricoMotoboyPage() {
   const { user, loading } = useAuth()
   const router = useRouter()
-  const firestore = getFirestore(app)
+  const firestore = getFirestore()
 
   const [entregas, setEntregas] = useState([])
   const [loadingData, setLoadingData] = useState(false)
@@ -47,30 +37,19 @@ export default function HistoricoMotoboyPage() {
           console.error(err)
           setError('Erro ao buscar entregas.')
         })
-        .finally(() => {
-          setLoadingData(false)
-        })
+        .finally(() => setLoadingData(false))
     }
   }, [loading, user, firestore])
 
   if (loading) return <p className={styles.loading}>Carregando autenticação...</p>
-
   if (!user) return <p className={styles.error}>Você precisa estar logado para ver o histórico.</p>
-
   if (loadingData) return <p className={styles.loading}>Carregando histórico...</p>
-
   if (error) return <p className={styles.error}>{error}</p>
-
   if (entregas.length === 0) return <p className={styles.empty}>Nenhuma entrega finalizada encontrada.</p>
 
   return (
     <main className={styles.container}>
-      {/* Botão de voltar */}
-      <button
-        type="button"
-        onClick={() => router.push('/dashboard')}
-        className={styles.buttonBack}
-      >
+      <button type="button" onClick={() => router.push('/dashboard')} className={styles.buttonBack}>
         ← Voltar
       </button>
 
@@ -79,7 +58,6 @@ export default function HistoricoMotoboyPage() {
       <ul className={styles.lista}>
         {entregas.map(entrega => (
           <li key={entrega.id} className={styles.item}>
-            {/* Informações detalhadas da entrega */}
             <div className={styles.info}>
               <div className={styles.cardLinha}>
                 <FaMapMarkerAlt />
@@ -87,7 +65,7 @@ export default function HistoricoMotoboyPage() {
               </div>
               <div className={styles.cardLinha}>
                 <FaRoute />
-                <strong>Destino:</strong> {entrega.destino}
+                <strong>Destinos:</strong> {entrega.destinos?.join(', ')}
               </div>
               <div className={styles.cardLinha}>
                 <FaStickyNote />
@@ -95,26 +73,35 @@ export default function HistoricoMotoboyPage() {
               </div>
               <div className={styles.cardLinha}>
                 <FaUser />
-                <strong>Destinatário:</strong> {entrega.destinatario || '—'}
+                <strong>Destinatários:</strong> {entrega.destinatarios?.map(d => d.nome).join(', ') || '—'}
               </div>
               <div className={styles.cardLinha}>
                 <FaPhone />
-                <strong>Telefone:</strong> {entrega.telefoneDestinatario || '—'}
-              </div>
-              <div className={styles.cardLinha}>
-                <FaRulerHorizontal />
-                <strong>Distância:</strong> {entrega.distanciaKm?.toFixed(2) || '0.00'} km
+                <strong>Telefones:</strong> {entrega.destinatarios?.map(d => d.telefone).join(', ') || '—'}
               </div>
               <div className={styles.cardLinha}>
                 <FaClock />
-                <strong>Tempo estimado:</strong> {Math.round(entrega.tempoMin) || 0} min
+                <strong>Duração da entrega:</strong> {entrega.tempoMin ? Math.round(entrega.tempoMin) + ' min' : '—'}
               </div>
               <div className={styles.cardLinha}>
                 <FaDollarSign />
-                <strong>Valor para você:</strong> R$ {entrega.valorMotoboy?.toFixed(2) || '0.00'}
+                <strong>Valor recebido:</strong> R$ {entrega.valorMotoboy?.toFixed(2) || '0.00'}
               </div>
 
-              {/* Status e link para recibo */}
+              {/* Histórico de posições percorridas */}
+              {entrega.caminhoPercorrido && entrega.caminhoPercorrido.length > 0 && (
+                <div className={styles.cardLinha}>
+                  <strong>Rota percorrida:</strong>
+                  <ul className={styles.caminhoList}>
+                    {entrega.caminhoPercorrido.map((p, idx) => (
+                      <li key={idx}>
+                        Lat: {p.lat.toFixed(5)}, Lng: {p.lng.toFixed(5)}, {new Date(p.timestamp?.seconds * 1000).toLocaleString()}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               <div className={styles.statusLinha}>
                 <strong>Status:</strong> {entrega.status}
               </div>

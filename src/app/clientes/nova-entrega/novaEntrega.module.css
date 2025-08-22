@@ -103,6 +103,28 @@
   background-color: #a46a2d;
 }
 
+.buttonSecondary {
+  background-color: var(--color-accent);
+  color: #fff;
+  padding: 0.5rem 1rem; /* menor que o primary */
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.buttonSecondary:hover:not(:disabled) {
+  background-color: #a46a2d;
+}
+
+.buttonSecondary:disabled {
+  background-color: #d1bfa8;
+  cursor: not-allowed;
+}
+
+
 .mapaWrapper {
   margin-top: 2rem;
   height: 350px;

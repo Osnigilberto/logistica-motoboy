@@ -1,3 +1,4 @@
+/* Container e Tipografia */
 .container {
   padding: 2rem;
   max-width: 1200px;
@@ -45,23 +46,14 @@
   box-shadow: 0 4px 12px rgba(0,0,0,0.12);
 }
 
-/* Cor verde padrão para valores positivos */
 .kpiCard p {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #2e7d32;
-  margin: 0;
+  color: #2e7d32; /* padrão verde */
 }
 
-/* Cor vermelha para KPIs de atraso - aplique essa classe no React para o cartão de atrasadas */
-.kpiCard.atrasadas p {
-  color: #d32f2f;
-}
-
-/* Cor laranja para KPIs de "em andamento" - aplique essa classe no React para o cartão de andamento */
-.kpiCard.andamento p {
-  color: #f57c00;
-}
+.kpiCard.atrasadas p { color: #d32f2f; }
+.kpiCard.andamento p { color: #f57c00; }
 
 /* Gráficos */
 .graphSection {
@@ -86,13 +78,11 @@
   overflow-x: auto;
 }
 
-.tableSection h3 {
-  margin-bottom: 1rem;
-  font-size: 1.2rem;
-}
+.tableSection h3 { margin-bottom: 1rem; font-size: 1.2rem; }
 
 .table {
   width: 100%;
+  min-width: 600px;
   border-collapse: collapse;
   font-size: 0.95rem;
 }
@@ -104,15 +94,49 @@
   transition: background-color 0.3s ease;
 }
 
-.table th {
-  background-color: #f2f2f2;
-  color: #444;
+.table th { background-color: #f2f2f2; color: #444; }
+.table tbody tr:hover { background-color: #f0f8ff; }
+
+/* Status das entregas */
+.statusBadge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-weight: 600;
+  color: white;
+  text-transform: capitalize;
+  font-size: 0.85rem;
 }
 
-/* Efeito hover para linhas da tabela */
-.table tbody tr:hover {
-  background-color: #f0f8ff;
+.statusAmarelo { background-color: #fbc02d; } /* ativo */
+.statusCinza  { background-color: #757575; } /* em andamento */
+.statusVerde  { background-color: #388e3c; } /* concluida */
+.statusVermelho { background-color: #d32f2f; } /* atrasado */
+
+/* Botões da tabela */
+.buttonPrimary {
+  background-color: #1976d2;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
 }
+
+.buttonPrimary:hover { background-color: #1565c0; }
+
+.buttonSuccess {
+  background-color: #388e3c;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.buttonSuccess:hover { background-color: #2e7d32; }
 
 /* Status do motoboy */
 .statusSection {
@@ -123,9 +147,7 @@
   border-radius: 8px;
 }
 
-.statusSection h3 {
-  margin-bottom: 0.5rem;
-}
+.statusSection h3 { margin-bottom: 0.5rem; }
 
 .statusSection p {
   margin-bottom: 1rem;
@@ -136,7 +158,7 @@
   gap: 0.5rem;
 }
 
-/* Indicadores visuais para status (use um span com classe status-indicator no React) */
+/* Indicadores visuais de disponibilidade */
 .status-indicator {
   width: 14px;
   height: 14px;
@@ -144,13 +166,8 @@
   display: inline-block;
 }
 
-.status-indicator.disponivel {
-  background-color: #2e7d32; /* verde */
-}
-
-.status-indicator.ocupado {
-  background-color: #d32f2f; /* vermelho */
-}
+.status-indicator.disponivel { background-color: #2e7d32; }
+.status-indicator.ocupado { background-color: #d32f2f; }
 
 /* Botão para status do motoboy */
 .statusSection .button {
@@ -165,17 +182,9 @@
   color: white;
 }
 
-.statusSection .button:hover {
-  background-color: #1565c0;
-}
-
-.statusSection .button.ocupado {
-  background-color: #d32f2f;
-}
-
-.statusSection .button.ocupado:hover {
-  background-color: #b71c1c;
-}
+.statusSection .button:hover { background-color: #1565c0; }
+.statusSection .button.ocupado { background-color: #d32f2f; }
+.statusSection .button.ocupado:hover { background-color: #b71c1c; }
 
 /* Loading */
 .spinner {
@@ -195,24 +204,12 @@
 }
 
 @keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+  to { transform: rotate(360deg); }
 }
 
 /* Responsividade */
 @media (max-width: 768px) {
-  .graphSection {
-    flex-direction: column;
-  }
-
-  .actionsSection {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .actionButton, .button {
-    width: 100%;
-    text-align: center;
-  }
+  .graphSection { flex-direction: column; }
+  .actionsSection { flex-direction: column; align-items: stretch; }
+  .actionButton, .button { width: 100%; text-align: center; }
 }

@@ -2,33 +2,41 @@
 
 /* Container geral da página */
 .container {
-  max-width: 900px;
+  max-width: 700px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 2rem;
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background-color: var(--color-bg);
 }
 
 /* Botão de voltar */
 .buttonBack {
-  background-color: #e0e0e0;
-  color: #333;
-  border: none;
+  background-color: var(--color-bg);
+  color: var(--color-accent);
+  border: 1px solid var(--color-accent);
   padding: 8px 14px;
-  margin-bottom: 15px;
+  margin-bottom: 1.5rem;
   border-radius: 8px;
   cursor: pointer;
   font-size: 14px;
-  transition: background-color 0.3s ease;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  max-width: fit-content;
 }
 
 .buttonBack:hover {
-  background-color: #ccc;
+  background-color: var(--color-accent);
+  color: var(--color-bg);
+  border-color: var(--color-accent-dark);
 }
 
 /* Título da página */
 .title {
-  font-size: 1.8rem;
-  margin-bottom: 20px;
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
   text-align: center;
+  color: var(--color-accent);
 }
 
 /* Lista de entregas */
@@ -40,15 +48,16 @@
 
 /* Item da lista */
 .item {
-  background: #fff;
-  padding: 16px;
-  margin-bottom: 15px;
-  border-radius: 12px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-  transition: transform 0.2s ease;
+  background-color: #fff;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgb(0 0 0 / 0.05);
+  transition: box-shadow 0.3s ease, transform 0.2s ease;
 }
 
 .item:hover {
+  box-shadow: 0 4px 8px rgb(0 0 0 / 0.1);
   transform: translateY(-2px);
 }
 
@@ -56,86 +65,68 @@
 .info {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0.5rem;
 }
 
 /* Linha de cada informação com ícone e texto */
 .cardLinha {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--color-text);
 }
 
 /* Linha de status */
 .statusLinha {
-  margin-top: 8px;
-  font-weight: bold;
-  color: #555;
+  margin-top: 0.5rem;
+  font-weight: 600;
+  color: var(--color-accent);
 }
 
 /* Link do recibo */
 .link {
   display: inline-block;
-  margin-top: 10px;
-  padding: 6px 12px;
-  background-color: #f4a261;
-  color: white;
+  margin-top: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: var(--color-accent);
+  color: var(--color-bg);
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 0.9rem;
   text-decoration: none;
   transition: background-color 0.3s ease;
 }
 
 .link:hover {
-  background-color: #e76f51;
+  background-color: var(--color-accent-dark);
 }
 
 /* Estados de carregamento e erro */
-.loading {
+.loading,
+.error,
+.empty {
   text-align: center;
-  padding: 20px;
+  padding: 1.5rem;
+  font-size: 0.95rem;
+  color: var(--color-muted);
 }
 
 .error {
-  color: red;
-  text-align: center;
-  padding: 20px;
+  color: #e53935;
 }
-
-.empty {
-  text-align: center;
-  color: #777;
-  padding: 20px;
-}
-
-.statusLinha {
-  margin-top: 8px;
-  font-weight: bold;
-  color: #2a9d8f; /* Verde suave para indicar concluído */
-}
-
-.link {
-  background-color: #2a9d8f;
-}
-
-.link:hover {
-  background-color: #21867a;
-}
-
 
 /* Responsividade */
-@media (max-width: 600px) {
+@media (max-width: 480px) {
   .title {
-    font-size: 1.4rem;
+    font-size: 1.5rem;
   }
 
   .cardLinha {
-    font-size: 13px;
+    font-size: 0.85rem;
   }
 
   .link {
-    font-size: 13px;
-    padding: 5px 10px;
+    font-size: 0.85rem;
+    padding: 0.4rem 0.8rem;
   }
 }

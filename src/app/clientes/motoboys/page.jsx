@@ -28,6 +28,7 @@ export default function Motoboys() {
   const [emailMotoboy, setEmailMotoboy] = useState('');
   const [loadingVinculo, setLoadingVinculo] = useState(false);
 
+  // 🔹 Carregar motoboys vinculados
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
@@ -76,6 +77,7 @@ export default function Motoboys() {
     }
   }, [user, loading, router]);
 
+  // 🔹 Vincular motoboy pelo e-mail
   async function handleVincularMotoboy() {
     if (!emailMotoboy.trim()) {
       toast.error('Por favor, informe o e-mail do motoboy.');
@@ -103,7 +105,7 @@ export default function Motoboys() {
       const motoboyDoc = querySnapshot.docs[0];
       const motoboyId = motoboyDoc.id;
 
-      // Verifica se vínculo já existe para evitar duplicidade
+      // Verifica vínculo existente
       const vinculosQuery = query(
         collection(db, 'vinculos'),
         where('clienteId', '==', user.uid),
@@ -136,6 +138,7 @@ export default function Motoboys() {
     }
   }
 
+  // 🔹 Remover vínculo
   async function handleRemoverVinculo(vinculoId) {
     if (!confirm('Tem certeza que deseja remover este motoboy?')) return;
 
@@ -172,6 +175,7 @@ export default function Motoboys() {
 
       <h1 className={styles.title}>Motoboys Vinculados</h1>
 
+      {/* 🔹 Formulário vincular */}
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -205,19 +209,29 @@ export default function Motoboys() {
         </button>
       </form>
 
+      {/* 🔹 Lista de motoboys */}
       {motoboys.length === 0 ? (
         <p className={styles.empty}>Você não tem motoboys vinculados.</p>
       ) : (
         <ul className={styles.list}>
-          {motoboys.map((motoboy) => (
-            <li key={motoboy.id} className={styles.item}>
-              <p><strong>Nome:</strong> {motoboy.nome || '—'}</p>
-              <p><strong>E-mail:</strong> {motoboy.email || '—'}</p>
-              <p><strong>Telefone:</strong> {motoboy.telefone || '—'}</p>
+          {motoboys.map((m) => (
+            <li key={m.id} className={styles.item}>
+              <div className={styles.cardHeader}>
+                <img
+                  src={m.photoURL || '/avatar-padrao.png'}
+                  alt={m.nome || 'Motoboy'}
+                  className={styles.avatar}
+                />
+                <div className={styles.cardInfo}>
+                  <p><strong>Nome:</strong> {m.nome || '—'}</p>
+                  <p><strong>E-mail:</strong> {m.email || '—'}</p>
+                  <p><strong>Telefone:</strong> {m.telefone || '—'}</p>
+                </div>
+              </div>
               <button
                 className={styles.removeButton}
-                onClick={() => handleRemoverVinculo(motoboy.vinculoId)}
-                aria-label={`Remover motoboy ${motoboy.nome}`}
+                onClick={() => handleRemoverVinculo(m.vinculoId)}
+                aria-label={`Remover motoboy ${m.nome}`}
               >
                 Remover
               </button>
