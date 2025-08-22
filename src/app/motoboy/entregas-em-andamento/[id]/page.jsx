@@ -69,8 +69,6 @@ export default function PaginaEntregaEmAndamento() {
 
   /* =========================
      3. Criar marcadores das paradas
-     - Agora rodamos sempre que entrega, map ou status mudarem
-     - Assim os marcadores aparecem mesmo antes de iniciar a rota
   ============================ */
   useEffect(() => {
     if (map && entrega) {
@@ -91,18 +89,23 @@ export default function PaginaEntregaEmAndamento() {
             const marker = new google.maps.Marker({
               position: results[0].geometry.location,
               map,
+              label: {
+                text: String(i + 1),
+                color: '#fff',
+                fontWeight: 'bold',
+              },
               title: endereco,
               animation: paradasStatus[i] === 'em andamento' ? google.maps.Animation.BOUNCE : null,
               icon: {
                 path: google.maps.SymbolPath.CIRCLE,
-                scale: paradasStatus[i] === 'em andamento' ? 14 : 10,
+                scale: 20,
                 fillColor:
                   paradasStatus[i] === 'concluída'
                     ? '#4CAF50'
                     : paradasStatus[i] === 'em andamento'
                     ? '#007bff'
                     : '#FFC107',
-                fillOpacity: paradasStatus[i] === 'em andamento' ? 0.5 : 1,
+                fillOpacity: 1,
                 strokeColor: '#fff',
                 strokeWeight: 2,
               },
@@ -199,7 +202,7 @@ export default function PaginaEntregaEmAndamento() {
   }, [map, motoboyMarker, rotaIniciada, paradasMarkers, paradaAtualIndex])
 
   /* =========================
-     6. Iniciar rota (começa rastreamento do motoboy)
+     6. Iniciar rota
   ============================ */
   const iniciarRota = async () => {
     if (!map) return
@@ -248,7 +251,6 @@ export default function PaginaEntregaEmAndamento() {
       setParadasStatus(novaStatus)
       setParadaAtualIndex(null)
 
-      // Atualizar Firestore se todas concluídas
       if (novaStatus.every(status => status === 'concluída')) {
         await updateDoc(doc(db, 'entregas', entrega.id), {
           status: 'finalizada',
@@ -278,8 +280,8 @@ export default function PaginaEntregaEmAndamento() {
       <h1 className={styles.titulo}>Rota da Entrega</h1>
 
       {!rotaIniciada && (
-        <button className={styles.botaoFinalizar} onClick={iniciarRota}>
-          Iniciar Rota
+        <button className={`${styles.botaoAcao} ${styles.botaoIniciar}`} onClick={iniciarRota}>
+          🚀 Iniciar Rota
         </button>
       )}
 
@@ -304,14 +306,14 @@ export default function PaginaEntregaEmAndamento() {
             <p><strong>Telefone:</strong> {entrega.destinatarios[i]?.telefone}</p>
 
             {paradasStatus[i] === 'pendente' && (
-              <button className={styles.botaoFinalizar} onClick={() => escolherParada(i)}>
-                Escolher para Entrega
+              <button className={`${styles.botaoAcao} ${styles.botaoEscolher}`} onClick={() => escolherParada(i)}>
+                📍 Escolher para Entrega
               </button>
             )}
 
             {paradasStatus[i] === 'em andamento' && (
-              <button className={styles.botaoFinalizar} onClick={() => finalizarParada(i)}>
-                Finalizar Parada
+              <button className={`${styles.botaoAcao} ${styles.botaoFinalizar}`} onClick={() => finalizarParada(i)}>
+                ✅ Finalizar Parada
               </button>
             )}
           </div>
