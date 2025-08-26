@@ -1,0 +1,225 @@
+/* ---------------- Container Geral ---------------- */
+.container {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-family: 'Inter', sans-serif;
+  background-color: #f9fafb; /* fundo claro */
+  color: #1f2937; /* texto escuro */
+}
+
+/* ---------------- Título e Botões ---------------- */
+.title {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  color: #1f2937;
+}
+
+.addBtn, .backBtn {
+  background: linear-gradient(135deg, #3498db, #5dade2);
+  color: #fff;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: transform 0.15s, filter 0.2s;
+  margin-right: 1rem;
+}
+
+.addBtn:hover, .backBtn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+}
+
+/* ---------------- Tabela com estilo moderno ---------------- */
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 0.5rem; /* linhas “flutuantes” */
+  margin-top: 1rem;
+}
+
+.table th, .table td {
+  padding: 0.75rem 1rem;
+}
+
+.table th {
+  background-color: #e5e7eb;
+  color: #1f2937;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: left;
+}
+
+.table tr {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.table tr:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.table td {
+  color: #1f2937;
+}
+
+.avatarTable {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #5dade2;
+  transition: transform 0.2s;
+}
+
+.avatarTable:hover {
+  transform: scale(1.1);
+  border-color: #3498db;
+}
+
+/* ---------------- Badge para Tipo ---------------- */
+.badge {
+  padding: 0.25rem 0.7rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #fff;
+  text-align: center;
+  text-transform: capitalize;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  transition: transform 0.15s;
+}
+
+.badge:hover {
+  transform: scale(1.05);
+}
+
+.cliente {
+  background: linear-gradient(135deg, #3498db, #5dade2);
+}
+
+.motoboy {
+  background: linear-gradient(135deg, #2ecc71, #58d68d);
+}
+
+/* ---------------- Ações da Tabela ---------------- */
+.actionsTable button {
+  padding: 0.4rem 0.8rem;
+  border-radius: 10px;
+  border: none;
+  font-size: 0.85rem;
+  cursor: pointer;
+  margin-right: 0.3rem;
+  font-weight: 600;
+  transition: transform 0.15s, filter 0.2s;
+}
+
+.actionsTable .editBtn {
+  background: linear-gradient(135deg, #f39c12, #f5b041);
+  color: #fff;
+}
+
+.actionsTable .deleteBtn {
+  background: linear-gradient(135deg, #e74c3c, #ec7063);
+  color: #fff;
+}
+
+.actionsTable button:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+/* ---------------- Modal ---------------- */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.3);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1100;
+}
+
+.modal {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 16px;
+  width: 420px;
+  max-width: 95%;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+  color: #1f2937;
+  border: 1px solid rgba(0,0,0,0.05);
+}
+
+/* ---------------- Formulário ---------------- */
+.form label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.form input, .form select {
+  width: 100%;
+  padding: 0.55rem;
+  margin-bottom: 1rem;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  background: #f3f4f6;
+  color: #1f2937;
+  transition: border 0.2s, box-shadow 0.2s;
+}
+
+.form input:focus, .form select:focus {
+  border-color: #58d68d;
+  box-shadow: 0 0 8px rgba(88, 214, 141, 0.3);
+  outline: none;
+}
+
+/* ---------------- Botões do Form ---------------- */
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.saveBtn {
+  background: linear-gradient(135deg, #2ecc71, #58d68d);
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: transform 0.15s, filter 0.2s;
+}
+
+.cancelBtn {
+  background: linear-gradient(135deg, #95a5a6, #bdc3c7);
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: transform 0.15s, filter 0.2s;
+}
+
+.saveBtn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.cancelBtn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}

@@ -1,0 +1,72 @@
+.container {
+  padding: 20px;
+  font-family: var(--font-sans);
+}
+
+.backBtn {
+  margin-bottom: 15px;
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.h1 {
+  margin-bottom: 20px;
+  color: var(--color-text);
+}
+
+/* Tabela */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.table th, .table td {
+  padding: 12px 15px;
+  text-align: left;
+  font-size: 0.95rem;
+}
+
+.table th {
+  background-color: var(--color-accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.table tr:nth-child(even) td {
+  background-color: #f9f9f9;
+}
+
+.table tr:hover td {
+  background-color: #f1f1f1;
+}
+
+/* Destaque Top 3 */
+.top3 td {
+  font-weight: bold;
+}
+
+.top3:nth-child(1) td {
+  background-color: gold;
+}
+
+.top3:nth-child(2) td {
+  background-color: silver;
+}
+
+.top3:nth-child(3) td {
+  background-color: #cd7f32; /* bronze */
+}
+
+/* Medalhas */
+.table td:last-child {
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}

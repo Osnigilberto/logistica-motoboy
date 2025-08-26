@@ -122,6 +122,73 @@
   font-style: italic;
 }
 
+/* Container geral já existente */
+.container {
+  max-width: 480px;
+  margin: 24px auto;
+  padding: 0 16px 32px;
+  font-family: var(--font-sans), sans-serif;
+  color: var(--color-text);
+}
+
+/* Ranking da semana */
+.ranking {
+  margin-top: 28px;
+  background-color: var(--color-bg);
+  border-radius: 12px;
+  padding: 16px 20px;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);
+}
+
+.ranking h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.2rem;
+  margin-bottom: 12px;
+  color: var(--color-accent-dark);
+}
+
+.tableRanking {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tableRanking th,
+.tableRanking td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--color-muted);
+  font-size: 0.95rem;
+}
+
+.tableRanking th {
+  font-weight: 600;
+  color: var(--color-accent-dark);
+}
+
+.tableRanking tr.destaque {
+  background-color: var(--color-accent);
+  color: var(--color-bg);
+  font-weight: 700;
+}
+
+.tableRanking tr.destaque td {
+  border-bottom: 1px solid var(--color-bg);
+}
+
+.tableRanking tbody tr:hover {
+  background-color: rgba(202, 108, 61, 0.1);
+}
+
+.ranking p {
+  margin-top: 12px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--color-accent-dark);
+}
+
+
 @media (min-width: 480px) {
   .estatisticas {
     grid-template-columns: 1fr 1fr;

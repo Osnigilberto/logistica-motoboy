@@ -1,0 +1,104 @@
+/* Sidebar desktop */
+.sidebar {
+  width: 220px;
+  background: #faf7f2;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  border-right: 1px solid #ddd;
+  box-sizing: border-box;
+  transition: transform 0.3s ease;
+}
+
+.logo {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 1.5rem;
+  color: var(--color-accent);
+  text-align: center;
+}
+
+.nav {
+  flex: 1;
+}
+
+.nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.nav li {
+  margin-bottom: 0.75rem;
+}
+
+.nav li a {
+  text-decoration: none;
+  color: var(--color-text);
+  font-weight: 500;
+  display: block;
+  padding: 0.5rem;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.nav li a:hover {
+  background: var(--color-accent-light, #f5e9e2);
+}
+
+.active a {
+  font-weight: bold;
+  color: var(--color-accent-dark);
+  background: var(--color-accent-light, #f5e9e2);
+}
+
+.logout {
+  margin-top: 1rem;
+  padding: 0.5rem;
+  background: var(--color-accent);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.logout:hover {
+  background: var(--color-accent-dark);
+}
+
+/* Hamburger button */
+.hamburger {
+  display: none;
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  background: var(--color-accent);
+  color: white;
+  border: none;
+  padding: 0.5rem;
+  border-radius: 6px;
+  z-index: 1001;
+  cursor: pointer;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    transform: translateX(-100%);
+    z-index: 1000;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .hamburger {
+    display: block;
+  }
+}

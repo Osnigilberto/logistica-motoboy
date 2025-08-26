@@ -15,10 +15,7 @@ export default function NovaEntregaPage() {
   const [userId, setUserId] = useState(null);
 
   const [form, setForm] = useState({ origem: '', descricao: '' });
-
-  // Mantemos a lista de destinos para cálculo/mapa
-  const [destinos, setDestinos] = useState(['']); // apenas endereços
-  // Cada destino agora pode ter seu próprio destinatário/telefone
+  const [destinos, setDestinos] = useState(['']);
   const [destinatarios, setDestinatarios] = useState([{ nome: '', telefone: '' }]);
 
   const [distanciaKm, setDistanciaKm] = useState(null);
@@ -44,11 +41,8 @@ export default function NovaEntregaPage() {
   const aplicarMascaraTelefone = (valor) =>
     VMasker.toPattern(valor.replace(/\D/g, ''), '(99) 99999-9999');
 
-  const handleChange = (e) => {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
+  const handleChange = (e) => setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
 
-  // Destinos múltiplos
   const handleDestinoChange = (index, value) => {
     const novosDestinos = [...destinos];
     novosDestinos[index] = value;
@@ -71,7 +65,7 @@ export default function NovaEntregaPage() {
     setDestinatarios(novos);
   };
 
-  // Recalcula valores sempre que distância ou destinos mudam
+  // Recalcular valores sempre que distância ou destinos mudam
   useEffect(() => {
     if (!distanciaKm) return;
     const taxaParadas = destinos.length > 1 ? (destinos.length - 1) * 3.0 : 0;
@@ -86,19 +80,17 @@ export default function NovaEntregaPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validação: todos os destinos e destinatários preenchidos
+    // Validação
     for (let i = 0; i < destinos.length; i++) {
       if (!destinos[i] || !destinatarios[i].nome || !destinatarios[i].telefone) {
         setErro('Preencha todos os campos de todos os destinos.');
         return;
       }
     }
-
     if (!form.origem || !form.descricao) {
       setErro('Preencha todos os campos obrigatórios.');
       return;
     }
-
     if (!distanciaKm || !tempoMin || !valorCliente) {
       setErro('Rota inválida ou incompleta.');
       return;
@@ -110,18 +102,15 @@ export default function NovaEntregaPage() {
       await addDoc(collection(db, 'entregas'), {
         clienteId: userId,
         origem: form.origem.trim(),
-        destinos: destinos.map((d) => d.trim()),
-        destinatarios: destinatarios.map((d) => ({
-          nome: d.nome.trim(),
-          telefone: d.telefone.trim(),
-        })),
+        destinos: destinos.map(d => d.trim()),
+        destinatarios: destinatarios.map(d => ({ nome: d.nome.trim(), telefone: d.telefone.trim() })),
         descricao: form.descricao.trim(),
         distanciaKm,
         tempoMin,
         valorCliente,
         valorMotoboy,
         valorPlataforma,
-        paradas: destinos.length,
+        numeroParadas: destinos.length,
         status: 'ativo',
         motoboyId: '',
         criadoEm: serverTimestamp(),
@@ -137,84 +126,29 @@ export default function NovaEntregaPage() {
 
   return (
     <main className={styles.container}>
-      <button type="button" onClick={() => router.back()} className={styles.buttonBack}>
-        ← Voltar
-      </button>
+      <button type="button" onClick={() => router.back()} className={styles.buttonBack}>← Voltar</button>
 
       <h1 className={styles.title}>Nova Entrega</h1>
 
       <form onSubmit={handleSubmit} className={styles.form}>
         <label className={styles.label}>
           Origem
-          <input
-            type="text"
-            name="origem"
-            value={form.origem}
-            onChange={handleChange}
-            className={styles.input}
-            placeholder="Endereço de origem"
-            required
-            disabled={loading}
-          />
+          <input type="text" name="origem" value={form.origem} onChange={handleChange} className={styles.input} placeholder="Endereço de origem" required disabled={loading}/>
         </label>
 
-        {/* Destinos + Destinatários */}
         {destinos.map((dest, index) => (
           <div key={index} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
-            <input
-              type="text"
-              placeholder={`Destino ${index + 1}`}
-              value={dest}
-              onChange={(e) => handleDestinoChange(index, e.target.value)}
-              className={styles.input}
-              required
-              disabled={loading}
-            />
-            <input
-              type="text"
-              placeholder="Destinatário"
-              value={destinatarios[index].nome}
-              onChange={(e) => handleDestinatarioChange(index, 'nome', e.target.value)}
-              className={styles.input}
-              required
-              disabled={loading}
-            />
-            <input
-              type="tel"
-              placeholder="Telefone"
-              value={destinatarios[index].telefone}
-              onChange={(e) => handleDestinatarioChange(index, 'telefone', aplicarMascaraTelefone(e.target.value))}
-              className={styles.input}
-              required
-              disabled={loading}
-            />
-            {index > 0 && (
-              <button type="button" onClick={() => removerDestino(index)} disabled={loading}>
-                ❌
-              </button>
-            )}
+            <input type="text" placeholder={`Destino ${index + 1}`} value={dest} onChange={e => handleDestinoChange(index, e.target.value)} className={styles.input} required disabled={loading}/>
+            <input type="text" placeholder="Destinatário" value={destinatarios[index].nome} onChange={e => handleDestinatarioChange(index, 'nome', e.target.value)} className={styles.input} required disabled={loading}/>
+            <input type="tel" placeholder="Telefone" value={destinatarios[index].telefone} onChange={e => handleDestinatarioChange(index, 'telefone', aplicarMascaraTelefone(e.target.value))} className={styles.input} required disabled={loading}/>
+            {index > 0 && <button type="button" onClick={() => removerDestino(index)} disabled={loading}>❌</button>}
           </div>
         ))}
-        <button
-          type="button"
-          onClick={adicionarDestino}
-          disabled={loading}
-          className={styles.buttonSecondary}
-        >
-          + Adicionar parada
-        </button>
+        <button type="button" onClick={adicionarDestino} disabled={loading} className={styles.buttonSecondary}>+ Adicionar parada</button>
 
         <label className={styles.label}>
           Descrição
-          <textarea
-            name="descricao"
-            value={form.descricao}
-            onChange={handleChange}
-            className={styles.textarea}
-            placeholder="Descrição da entrega"
-            required
-            disabled={loading}
-          />
+          <textarea name="descricao" value={form.descricao} onChange={handleChange} className={styles.textarea} placeholder="Descrição da entrega" required disabled={loading}/>
         </label>
 
         {erro && <p className={styles.error}>{erro}</p>}
@@ -237,7 +171,6 @@ export default function NovaEntregaPage() {
         </div>
       </form>
 
-      {/* Mapa */}
       {form.origem && destinos.length > 0 && (
         <div className={styles.mapaWrapper}>
           <MapaEntrega

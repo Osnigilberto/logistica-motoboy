@@ -1,0 +1,106 @@
+/* Container principal */
+.container {
+  padding: 20px;
+  font-family: 'Inter', sans-serif;
+  color: var(--color-text, #2d2d2d);
+  max-width: 1200px;
+  margin: 0 auto;
+  position: relative;
+}
+
+/* Botão de voltar */
+.backBtn {
+  background: none;
+  border: none;
+  color: var(--color-accent, #ca6c3d);
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 1rem;
+  margin-bottom: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: color 0.2s;
+}
+
+.backBtn:hover {
+  color: var(--color-accent-dark, #b2592e);
+}
+
+/* Título */
+.h1 {
+  font-size: 1.8rem;
+  margin-bottom: 20px;
+  font-weight: 600;
+}
+
+/* Filtros */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.filters select {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border, #ccc);
+  font-family: inherit;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+/* Gráfico */
+.chartContainer {
+  width: 100%;
+  height: 300px;
+  margin-bottom: 30px;
+}
+
+/* Tabela */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+}
+
+.table th, .table td {
+  padding: 12px 15px;
+  text-align: left;
+  font-size: 0.95rem;
+}
+
+.table th {
+  background-color: var(--color-accent, #ca6c3d);
+  color: #fff;
+  font-weight: 600;
+}
+
+.table tr:nth-child(even) {
+  background-color: #f8f8f8;
+}
+
+.table tr:hover {
+  background-color: #f1f1f1;
+}
+
+/* Status color */
+.table td {
+  text-transform: capitalize;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+  .filters {
+    flex-direction: column;
+  }
+
+  .table th, .table td {
+    padding: 10px;
+    font-size: 0.85rem;
+  }
+}

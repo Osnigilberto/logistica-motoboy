@@ -33,35 +33,36 @@ export default function Dashboard() {
   const [ultimasEntregas, setUltimasEntregas] = useState([]);
   const [motoboysAtivosCount, setMotoboysAtivosCount] = useState(0);
   const [entregasPorDiaSemana, setEntregasPorDiaSemana] = useState([]);
+  const [entregasEmAndamento, setEntregasEmAndamento] = useState([]);
+  const [ranking, setRanking] = useState([]);
+  const [kmHoje, setKmHoje] = useState(0);
 
-  const [entregasEmAndamento, setEntregasEmAndamento] = useState(0);
-  const [entregasAtrasadas, setEntregasAtrasadas] = useState(0);
-  const [totalMes, setTotalMes] = useState(0);
+  const isCliente = profile?.tipo === 'cliente';
+  const userType = profile?.tipo || 'cliente';
+  const nomeExibicao = isCliente
+    ? profile?.nomeEmpresa?.trim() || 'Sua empresa'
+    : profile?.nome?.trim() || 'Motoboy';
 
+  /* ======================
+     Funções para buscar dados
+  ====================== */
   async function fetchEntregasPorUsuario(uid, tipo) {
     const entregasRef = collection(db, 'entregas');
     let q;
 
-    if (tipo === 'cliente') {
-      q = query(entregasRef, where('clienteId', '==', uid));
-    } else if (tipo === 'motoboy') {
-      q = query(entregasRef, where('motoboyId', '==', uid));
-    } else {
-      q = query(entregasRef, where('clienteId', '==', uid));
-    }
+    if (tipo === 'cliente') q = query(entregasRef, where('clienteId', '==', uid));
+    else q = query(entregasRef, where('motoboyId', '==', uid));
 
     const snapshot = await getDocs(q);
     const entregas = [];
-    snapshot.forEach((doc) => {
-      entregas.push({ id: doc.id, ...doc.data() });
-    });
+    snapshot.forEach((doc) => entregas.push({ id: doc.id, ...doc.data() }));
     return entregas;
   }
 
   function agruparPorStatus(entregas) {
     const statusCount = {};
-    entregas.forEach((entrega) => {
-      const status = entrega.status || 'Indefinido';
+    entregas.forEach((e) => {
+      const status = e.status || 'Indefinido';
       statusCount[status] = (statusCount[status] || 0) + 1;
     });
     return Object.entries(statusCount).map(([name, value]) => ({ name, value }));
@@ -75,14 +76,11 @@ export default function Dashboard() {
       const diaSemana = data.getDay();
       contagem[diaSemana]++;
     });
-    return dias.map((dia, index) => ({
-      dia,
-      entregas: contagem[index],
-    }));
+    return dias.map((dia, i) => ({ dia, entregas: contagem[i] }));
   }
 
   async function pegarUltimasEntregas(entregas, limite = 5) {
-    const entregasOrdenadas = entregas
+    const ordenadas = entregas
       .sort((a, b) => {
         const dataA = a.criadoEm?.toDate ? a.criadoEm.toDate() : new Date(a.criadoEm);
         const dataB = b.criadoEm?.toDate ? b.criadoEm.toDate() : new Date(b.criadoEm);
@@ -91,112 +89,96 @@ export default function Dashboard() {
       .slice(0, limite);
 
     const entregasComNomes = await Promise.all(
-      entregasOrdenadas.map(async (entrega) => {
+      ordenadas.map(async (entrega) => {
         let nomeCliente = 'Desconhecido';
         let nomeMotoboy = 'Desconhecido';
-
         try {
           if (entrega.clienteId) {
-            const clienteRef = doc(db, 'users', entrega.clienteId);
-            const clienteSnap = await getDoc(clienteRef);
-            if (clienteSnap.exists()) {
-              const data = clienteSnap.data();
-              nomeCliente = data.nomeEmpresa || data.nome || 'Cliente';
-            }
+            const snap = await getDoc(doc(db, 'users', entrega.clienteId));
+            if (snap.exists()) nomeCliente = snap.data().nomeEmpresa || snap.data().nome || 'Cliente';
           }
-
           if (entrega.motoboyId) {
-            const motoboyRef = doc(db, 'users', entrega.motoboyId);
-            const motoboySnap = await getDoc(motoboyRef);
-            if (motoboySnap.exists()) {
-              const data = motoboySnap.data();
-              nomeMotoboy = data.nome || 'Motoboy';
-            }
+            const snap = await getDoc(doc(db, 'users', entrega.motoboyId));
+            if (snap.exists()) nomeMotoboy = snap.data().nome || 'Motoboy';
           }
-        } catch (error) {
-          console.error('Erro ao buscar nome do cliente/motoboy:', error);
-        }
-
+        } catch {}
         return { ...entrega, nomeCliente, nomeMotoboy };
       })
     );
-
     return entregasComNomes;
   }
 
-  async function fetchMotoboysAtivos(clienteUid) {
-    const vinculosRef = collection(db, 'vinculos');
-    const q = query(vinculosRef, where('clienteId', '==', clienteUid), where('status', '==', 'ativo'));
-    const snapshot = await getDocs(q);
-    return snapshot.size;
+  async function fetchRankingSemanal() {
+    const semanaId = getSemanaId();
+    const rankingRef = doc(db, 'ranking', semanaId);
+    const snap = await getDoc(rankingRef);
+    if (snap.exists()) setRanking(snap.data().listaMotoboys || []);
+    else setRanking([]);
   }
 
+  const getSemanaId = () => {
+    const hoje = new Date();
+    const ano = hoje.getFullYear();
+    const semana = Math.ceil((((hoje - new Date(ano, 0, 1)) / 86400000 + hoje.getDay() + 1) / 7));
+    return `${ano}-W${semana}`;
+  };
+
+  /* ======================
+     useEffect principal
+  ====================== */
   useEffect(() => {
     if (!loading && user && profile) {
       async function carregarDados() {
         setLoadingData(true);
         try {
           const entregas = await fetchEntregasPorUsuario(user.uid, profile.tipo);
+
           setEntregasStatusData(agruparPorStatus(entregas));
-          const ultimas = await pegarUltimasEntregas(entregas);
-          setUltimasEntregas(ultimas);
+          setUltimasEntregas(await pegarUltimasEntregas(entregas));
           setEntregasPorDiaSemana(agruparPorDiaDaSemana(entregas));
 
-          setEntregasEmAndamento(entregas.filter(e => e.status === 'em andamento').length);
-          setEntregasAtrasadas(entregas.filter(e => e.status === 'atrasado').length);
+          if (!isCliente) {
+            // Motoboy: filtrando entregas em andamento
+            const emAndamento = entregas.filter((e) => e.status === 'em andamento');
+            setEntregasEmAndamento(emAndamento);
 
-          const agora = new Date();
-          const mesAtual = agora.getMonth();
-          const anoAtual = agora.getFullYear();
-          const entregasMes = entregas.filter(e => {
-            const dataEntrega = e.criadoEm?.toDate ? e.criadoEm.toDate() : new Date(e.criadoEm);
-            return dataEntrega.getMonth() === mesAtual && dataEntrega.getFullYear() === anoAtual;
-          });
-          setTotalMes(entregasMes.length);
+            // Atualizar KM total (somando campo kmPercorridosAtual)
+            const kmTotal = emAndamento.reduce((acc, e) => acc + (e.kmPercorridosAtual || 0), 0);
+            setKmHoje(kmTotal);
 
-          if (profile.tipo === 'cliente') {
+            // Buscar ranking semanal
+            await fetchRankingSemanal();
+          }
+
+          if (isCliente) {
             const count = await fetchMotoboysAtivos(user.uid);
             setMotoboysAtivosCount(count);
-          } else {
-            setMotoboysAtivosCount(0);
-          }
-        } catch (error) {
-          console.error('Erro ao carregar entregas:', error);
-          setEntregasStatusData([{ name: 'Erro ao carregar', value: 1 }]);
-          setUltimasEntregas([]);
-          setMotoboysAtivosCount(0);
-          setEntregasEmAndamento(0);
-          setEntregasAtrasadas(0);
-          setTotalMes(0);
+          } else setMotoboysAtivosCount(0);
+        } catch (err) {
+          console.error(err);
         }
         setLoadingData(false);
       }
       carregarDados();
-    } else if (!loading && !user) {
-      router.push('/login');
-    } else if (!loading && user && !profile) {
-      router.push('/completar-perfil');
-    }
-  }, [loading, user, profile, router]);
+    } else if (!loading && !user) router.push('/login');
+    else if (!loading && user && !profile) router.push('/completar-perfil');
+  }, [loading, user, profile]);
 
-  const isCliente = profile?.tipo === 'cliente';
-  const userType = profile?.tipo || 'cliente';
-  const nomeExibicao = isCliente
-    ? profile?.nomeEmpresa?.trim() || 'Sua empresa'
-    : profile?.nome?.trim() || 'Motoboy';
+  async function fetchMotoboysAtivos(clienteUid) {
+    const vinculosRef = collection(db, 'vinculos');
+    const snapshot = await getDocs(query(vinculosRef, where('clienteId', '==', clienteUid), where('status', '==', 'ativo')));
+    return snapshot.size;
+  }
 
-  const toggleAvailability = () => {
-    setIsAvailable((prev) => !prev);
-  };
+  const toggleAvailability = () => setIsAvailable((prev) => !prev);
 
-  if (loading || loadingData) {
+  if (loading || loadingData)
     return (
       <main className={styles.container}>
         <div className={styles.spinner} />
         <p className={styles.loadingText}>Carregando painel...</p>
       </main>
     );
-  }
 
   return (
     <DashboardLayout userType={userType}>
@@ -206,17 +188,29 @@ export default function Dashboard() {
       </h1>
 
       <section className={styles.kpiSection}>
+        {!isCliente && (
+          <>
+            <div className={styles.kpiCard}>
+              <h3>KM hoje</h3>
+              <p>{kmHoje.toFixed(2)} km</p>
+            </div>
+            <div className={styles.kpiCard}>
+              <h3>Limite entregas</h3>
+              <p>{entregasEmAndamento.length} / 5</p>
+            </div>
+          </>
+        )}
         <div className={styles.kpiCard}>
           <h3>Entregas em andamento</h3>
-          <p>{entregasEmAndamento}</p>
+          <p>{entregasEmAndamento.length || entregasEmAndamento}</p>
         </div>
         <div className={styles.kpiCard}>
           <h3>Entregas atrasadas</h3>
-          <p>{entregasAtrasadas}</p>
+          <p>{entregasStatusData.find((e) => e.name === 'atrasado')?.value || 0}</p>
         </div>
         <div className={styles.kpiCard}>
           <h3>Total no mês</h3>
-          <p>{totalMes}</p>
+          <p>{ultimasEntregas.length}</p>
         </div>
         {isCliente && (
           <div className={styles.kpiCard}>
@@ -226,6 +220,20 @@ export default function Dashboard() {
         )}
       </section>
 
+      {!isCliente && ranking.length > 0 && (
+        <section className={styles.rankingSection}>
+          <h3>Ranking da Semana</h3>
+          <ul className={styles.rankingList}>
+            {ranking.map((m, i) => (
+              <li key={m.motoboyId}>
+                <strong>{i + 1}º:</strong> {m.motoboyId} — {m.pontos} pts
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* Gráficos e últimas entregas */}
       <section className={styles.graphSection}>
         <div className={styles.graphCard}>
           <h3>Entregas por status</h3>
