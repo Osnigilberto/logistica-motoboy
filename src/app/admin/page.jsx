@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { getFirestore, collection, getDocs } from 'firebase/firestore'
 import { getAuth, onAuthStateChanged } from 'firebase/auth'
 import { app } from '@/firebase/firebaseClient'
-import Sidebar from './Sidebar'
+import Sidebar from './sidebar'
 import styles from './admin.module.css'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts'
 
