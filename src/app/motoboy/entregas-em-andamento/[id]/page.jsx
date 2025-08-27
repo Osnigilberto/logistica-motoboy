@@ -269,21 +269,22 @@ export default function PaginaEntregaEmAndamento() {
     console.log('Resposta da função:', result.data)
     toast.success(result.data?.message || 'Parada finalizada com sucesso!')
 
-    // Atualiza status localmente
     setParadasStatus(prev => {
-      const novaStatus = [...prev]
-      novaStatus[paradaIndex] = 'concluída'
-      return novaStatus
-    })
-    setParadaAtualIndex(null)
+  const novaStatus = [...prev]
+  novaStatus[paradaIndex] = 'concluída'
 
-    // Se todas finalizadas, redireciona
-    if (paradasStatus.every(status => status === 'concluída')) {
-      router.push('/motoboy/entregas-em-andamento')
-    }
-  } catch (err) {
-    console.error('Erro ao chamar Cloud Function:', err)
-    toast.error('Erro ao finalizar parada: ' + (err.message || ''))
+  // Se todas finalizadas, redireciona
+  if (novaStatus.every(status => status === 'concluída')) {
+    router.push('/motoboy/entregas-em-andamento')
+  }
+
+  return novaStatus
+})
+setParadaAtualIndex(null)
+
+  } catch (error) {
+    console.error('Erro ao finalizar parada:', error)
+    toast.error('Erro ao finalizar parada!')
   }
 }
 
