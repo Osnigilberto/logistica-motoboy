@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { getFirestore, doc, getDoc, updateDoc, serverTimestamp, setDoc } from 'firebase/firestore'
+import { getFirestore, doc, getDoc } from 'firebase/firestore'
+import { getFunctions, httpsCallable } from 'firebase/functions'
 import { toast } from 'react-toastify'
 import { app } from '@/firebase/firebaseClient'
 import styles from './entregaRota.module.css'
@@ -12,6 +13,7 @@ export default function PaginaEntregaEmAndamento() {
   const { id } = useParams()
   const router = useRouter()
   const db = getFirestore(app)
+  const functions = getFunctions(app)
   const mapRef = useRef(null)
   const polyline = useRef(null)
 
@@ -237,115 +239,54 @@ export default function PaginaEntregaEmAndamento() {
   }
 
   /* =========================
-     8. Finalizar parada (calculando km automaticamente)
+     8. Finalizar parada via Cloud Function
   ============================ */
   const finalizarParada = async index => {
-    try {
-      const novaStatus = [...paradasStatus]
-      novaStatus[index] = 'concluída'
-      setParadasStatus(novaStatus)
-      setParadaAtualIndex(null)
+  if (!entrega?.id || !entrega?.motoboyId) {
+    toast.error('Entrega ou motoboy não definidos!')
+    return
+  }
 
-      // Calcular km total percorrido usando Google Maps Directions
-      let totalKm = 0
-      for (let i = 0; i < paradasMarkers.length; i++) {
-        const origin = i === 0 ? motoboyMarker.getPosition() : paradasMarkers[i - 1].getPosition()
-        const destination = paradasMarkers[i].getPosition()
-        totalKm += await calcularDistanciaKm(origin, destination)
-      }
+  // Garantir que paradaIndex seja número válido
+  const paradaIndex = Number(index)
+  if (isNaN(paradaIndex) || paradaIndex < 0 || paradaIndex >= entrega.destinos.length) {
+    toast.error('Índice de parada inválido!')
+    return
+  }
 
-      if (novaStatus.every(status => status === 'concluída')) {
-        const totalParadas = entrega.destinos.length
-        const taxaParada = totalParadas >= 2 ? 3 : 0
-        const valorEntregaCliente = totalKm * 1.7 + taxaParada
-        const valorEntregaMotoboy = totalKm * 1.5 + taxaParada
-        const lucroPlataforma = valorEntregaCliente - valorEntregaMotoboy
-
-        await updateDoc(doc(db, 'entregas', entrega.id), {
-          status: 'finalizada',
-          finalizadoEm: serverTimestamp(),
-          kmPercorridos: totalKm,
-          valorEntregaCliente,
-          valorEntregaMotoboy,
-          lucroPlataforma,
-        })
-
-        // Atualizar saldo motoboy
-        const motoboyRef = doc(db, 'motoboys', entrega.motoboyId)
-        const motoboySnap = await getDoc(motoboyRef)
-        if (motoboySnap.exists()) {
-          const dadosMotoboy = motoboySnap.data()
-          const novoSaldo = (dadosMotoboy.saldoDisponivel || 0) + valorEntregaMotoboy
-          const novasEntregas = (dadosMotoboy.entregasConcluidas || 0) + 1
-          const novosPontos = (dadosMotoboy.pontosSemana || 0) + 10
-          await updateDoc(motoboyRef, {
-            saldoDisponivel: novoSaldo,
-            entregasConcluidas: novasEntregas,
-            pontosSemana: novosPontos,
-          })
-
-          // Atualizar ranking semanal
-          const semanaId = getSemanaId()
-          const rankingRef = doc(db, 'ranking', semanaId)
-          const rankingSnap = await getDoc(rankingRef)
-          let listaMotoboys = []
-          if (rankingSnap.exists()) {
-            listaMotoboys = rankingSnap.data().listaMotoboys || []
-            const idx = listaMotoboys.findIndex(m => m.motoboyId === entrega.motoboyId)
-            if (idx >= 0) listaMotoboys[idx].pontos = novosPontos
-            else listaMotoboys.push({ motoboyId: entrega.motoboyId, pontos: novosPontos })
-          } else {
-            listaMotoboys.push({ motoboyId: entrega.motoboyId, pontos: novosPontos })
-          }
-          listaMotoboys.sort((a, b) => b.pontos - a.pontos)
-          listaMotoboys = listaMotoboys.map((m, i) => ({ ...m, posicao: i + 1 }))
-          await setDoc(rankingRef, { semanaId, listaMotoboys })
-        }
-
-        toast.success('Entrega finalizada!')
-        router.push('/motoboy/entregas-em-andamento')
-      }
-    } catch (err) {
-      toast.error('Erro ao finalizar parada')
-      console.error(err)
+  try {
+    // Debug: ver exatamente o que será enviado
+    const payload = {
+      entregaId: entrega.id,
+      motoboyId: entrega.motoboyId,
+      paradaIndex
     }
-  }
+    console.log('Enviando para Cloud Function:', payload)
 
-  /* =========================
-     Função utilitária: calcular distância em km
-  ============================ */
-  const calcularDistanciaKm = (origin, destination) => {
-    return new Promise(resolve => {
-      const directionsService = new google.maps.DirectionsService()
-      directionsService.route(
-        {
-          origin,
-          destination,
-          travelMode: google.maps.TravelMode.DRIVING,
-        },
-        (result, status) => {
-          if (status === 'OK') {
-            const route = result.routes[0]
-            let km = 0
-            route.legs.forEach(leg => {
-              km += leg.distance.value / 1000 // metros para km
-            })
-            resolve(km)
-          } else {
-            console.error('Erro ao calcular distância:', status)
-            resolve(0)
-          }
-        }
-      )
+    const finalizarFn = httpsCallable(functions, 'finalizarEntrega')
+    const result = await finalizarFn(payload)
+
+    console.log('Resposta da função:', result.data)
+    toast.success(result.data?.message || 'Parada finalizada com sucesso!')
+
+    // Atualiza status localmente
+    setParadasStatus(prev => {
+      const novaStatus = [...prev]
+      novaStatus[paradaIndex] = 'concluída'
+      return novaStatus
     })
-  }
+    setParadaAtualIndex(null)
 
-  const getSemanaId = () => {
-    const hoje = new Date()
-    const ano = hoje.getFullYear()
-    const semana = Math.ceil((((hoje - new Date(ano,0,1)) / 86400000 + hoje.getDay()+1)/7))
-    return `${ano}-W${semana}`
+    // Se todas finalizadas, redireciona
+    if (paradasStatus.every(status => status === 'concluída')) {
+      router.push('/motoboy/entregas-em-andamento')
+    }
+  } catch (err) {
+    console.error('Erro ao chamar Cloud Function:', err)
+    toast.error('Erro ao finalizar parada: ' + (err.message || ''))
   }
+}
+
 
   /* =========================
      Render
@@ -372,7 +313,13 @@ export default function PaginaEntregaEmAndamento() {
         {entrega.destinos.map((dest, i) => (
           <div
             key={i}
-            className={`${styles.paradaItem} ${paradasStatus[i] === 'pendente' ? 'pendente' : paradasStatus[i] === 'em andamento' ? 'emAndamento' : 'concluida'}`}
+            className={`${styles.paradaItem} ${
+              paradasStatus[i] === 'pendente'
+                ? 'pendente'
+                : paradasStatus[i] === 'em andamento'
+                ? 'emAndamento'
+                : 'concluida'
+            }`}
           >
             <p><strong>Parada {i + 1}:</strong> {dest}</p>
             <p><strong>Destinatário:</strong> {entrega.destinatarios[i]?.nome}</p>

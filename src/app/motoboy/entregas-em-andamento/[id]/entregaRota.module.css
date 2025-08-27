@@ -1,3 +1,6 @@
+/* entregaRota.module.css */
+
+/* Container principal */
 .container {
   max-width: 900px;
   margin: 1rem auto;
@@ -9,34 +12,15 @@
   color: var(--color-text);
 }
 
-.paradasWrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-top: 0.25rem;
+/* Loading */
+.loading {
+  font-size: 1.2rem;
+  text-align: center;
+  margin: 2rem 0;
+  color: var(--color-muted);
 }
 
-.paradaItem {
-  background-color: #f9f9f9;
-  padding: 0.5rem 0.75rem;
-  border-radius: 6px;
-  border-left: 6px solid #facc15; /* amarelo inicial */
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.paradaItem.atual {
-  transform: scale(1.03);
-  box-shadow: 0 0 10px rgba(0, 123, 255, 0.6);
-}
-
-.paradaItem span.finalizada {
-  color: #16a34a; /* verde */
-  font-weight: bold;
-}
-
+/* Botão voltar */
 .botaoVoltar {
   background: none;
   border: none;
@@ -59,6 +43,7 @@
   text-decoration: underline;
 }
 
+/* Título */
 .titulo {
   margin-top: 0.5rem;
   margin-bottom: 1rem;
@@ -68,6 +53,7 @@
   color: var(--color-accent-dark);
 }
 
+/* Mapa */
 .mapa {
   width: 100%;
   height: 350px;
@@ -77,31 +63,125 @@
   position: relative;
 }
 
-/* Pulso azul para parada atual */
-.pulse {
-  width: 20px;
-  height: 20px;
-  background: rgba(0, 123, 255, 0.5);
-  border-radius: 50%;
-  position: absolute;
-  animation: pulse 1.5s infinite;
+/* Wrapper das paradas */
+.paradasWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
 }
 
-@keyframes pulse {
-  0% {
-    transform: scale(0.7);
-    opacity: 0.8;
-  }
-  50% {
-    transform: scale(1.4);
-    opacity: 0.4;
-  }
-  100% {
-    transform: scale(0.7);
-    opacity: 0.8;
-  }
+/* Item de parada */
+.paradaItem {
+  background-color: #f9f9f9;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border-left: 6px solid #facc15;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+.paradaItem.emAndamento {
+  border-left-color: #007bff;
+  transform: scale(1.03);
+  box-shadow: 0 0 10px rgba(0, 123, 255, 0.4);
+}
+
+.paradaItem.concluida {
+  border-left-color: #16a34a;
+  background-color: #e6f9ec;
+}
+
+/* Info adicional das paradas */
+.paradaItem p {
+  margin: 0.2rem 0;
+}
+
+/* Botões de ação */
+.botaoAcao {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: center;
+  width: 100%;
+  padding: 0.75rem 1.2rem;
+  margin: 0.5rem 0;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease-in-out;
+  user-select: none;
+}
+
+.botaoAcao:active {
+  transform: scale(0.97);
+}
+
+/* Iniciar rota */
+.botaoIniciar {
+  background-color: var(--color-accent);
+  color: white;
+}
+
+.botaoIniciar:hover,
+.botaoIniciar:focus {
+  background-color: var(--color-accent-dark);
+}
+
+/* Escolher parada */
+.botaoEscolher {
+  background-color: #facc15;
+  color: #1e293b;
+}
+
+.botaoEscolher:hover,
+.botaoEscolher:focus {
+  background-color: #eab308;
+}
+
+/* Finalizar parada individual */
+.botaoFinalizarParada {
+  background-color: #16a34a;
+  color: white;
+}
+
+.botaoFinalizarParada:hover,
+.botaoFinalizarParada:focus {
+  background-color: #15803d;
+}
+
+/* Botão finalizar entrega (central grande) */
+.botaoFinalizar {
+  background-color: var(--color-accent);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: center;
+  width: 100%;
+  max-width: 320px;
+  margin: 1rem auto 0;
+  transition: background-color 0.3s ease;
+  user-select: none;
+}
+
+.botaoFinalizar:hover,
+.botaoFinalizar:focus {
+  background-color: var(--color-accent-dark);
+  outline: none;
+}
+
+/* Informações gerais da entrega */
 .info {
   display: flex;
   flex-direction: column;
@@ -133,100 +213,25 @@
   word-break: break-word;
 }
 
-/* ========================
-   Botões de ação
-=========================== */
-
-.botaoAcao {
-  display: block;
-  width: 100%;
-  padding: 0.75rem 1.2rem;
-  margin: 0.5rem 0;
-  border: none;
-  border-radius: 6px;
-  font-size: 1rem;
-  font-weight: 700;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  justify-content: center;
-  transition: background-color 0.2s ease, transform 0.1s ease-in-out;
-  user-select: none;
+/* Pulsação azul para parada atual (opcional se usar pulse) */
+.pulse {
+  width: 20px;
+  height: 20px;
+  background: rgba(0, 123, 255, 0.5);
+  border-radius: 50%;
+  position: absolute;
+  animation: pulse 1.5s infinite;
 }
 
-.botaoAcao:active {
-  transform: scale(0.97);
+@keyframes pulse {
+  0% { transform: scale(0.7); opacity: 0.8; }
+  50% { transform: scale(1.4); opacity: 0.4; }
+  100% { transform: scale(0.7); opacity: 0.8; }
 }
 
-/* Iniciar rota = cor de destaque */
-.botaoIniciar {
-  background-color: var(--color-accent);
-  color: white;
-}
-
-.botaoIniciar:hover,
-.botaoIniciar:focus {
-  background-color: var(--color-accent-dark);
-}
-
-/* Escolher parada = amarelo */
-.botaoEscolher {
-  background-color: #facc15;
-  color: #1e293b;
-}
-
-.botaoEscolher:hover,
-.botaoEscolher:focus {
-  background-color: #eab308;
-}
-
-/* Finalizar parada = verde */
-.botaoFinalizarParada {
-  background-color: #16a34a;
-  color: white;
-}
-
-.botaoFinalizarParada:hover,
-.botaoFinalizarParada:focus {
-  background-color: #15803d;
-}
-
-/* Botão grande central (ex: finalizar tudo) */
-.botaoFinalizar {
-  background-color: var(--color-accent);
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  font-size: 1.1rem;
-  font-weight: 700;
-  border-radius: 6px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  justify-content: center;
-  width: 100%;
-  max-width: 320px;
-  margin: 0 auto;
-  transition: background-color 0.3s ease;
-  user-select: none;
-}
-
-.botaoFinalizar:hover,
-.botaoFinalizar:focus {
-  background-color: var(--color-accent-dark);
-  outline: none;
-}
-
-.loading {
-  font-size: 1.2rem;
-  text-align: center;
-  margin: 2rem 0;
-  color: var(--color-muted);
-}
-
-/* Responsividade */
+/* ==========================
+   Responsividade
+========================== */
 @media (max-width: 600px) {
   .container {
     padding: 0.75rem;
@@ -248,5 +253,9 @@
   .botaoAcao {
     font-size: 0.95rem;
     padding: 0.6rem 1rem;
+  }
+
+  .mapa {
+    height: 300px;
   }
 }
