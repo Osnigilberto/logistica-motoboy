@@ -203,6 +203,56 @@
   color: #555;
 }
 
+/* Ranking */
+.tableWrapper {
+  overflow-x: auto;
+  margin-top: 1rem;
+}
+
+.rankingTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+.rankingTable th,
+.rankingTable td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.rankingTable th {
+  background: #f7f7f7;
+  font-weight: 600;
+  color: #555;
+}
+
+.rankingTable tbody tr:hover {
+  background: #f0f8ff;
+  transition: background 0.2s ease;
+}
+
+/* Destaques Top 3 */
+.rank1 {
+  background: linear-gradient(90deg, #fff9c4, #ffe082);
+  font-weight: bold;
+}
+
+.rank2 {
+  background: linear-gradient(90deg, #eeeeee, #e0e0e0);
+  font-weight: bold;
+}
+
+.rank3 {
+  background: linear-gradient(90deg, #ffe0b2, #ffcc80);
+  font-weight: bold;
+}
+
+
 @keyframes spin {
   to { transform: rotate(360deg); }
 }

@@ -35,3 +35,85 @@ button {
   font-family: inherit;
   cursor: pointer;
 }
+
+
+/* =========================
+   Info Window Responsivo
+=========================== */
+.infowindow {
+  font-family: 'Arial', sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  padding: 10px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  min-width: 172px;
+  max-width: 90vw; /* nunca ultrapassa a largura da tela */
+  word-wrap: break-word;
+}
+
+.infowindow p {
+  margin: 4px 0;
+}
+
+.infowindow button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  margin: 5px 4px 0 0;
+  cursor: pointer;
+  font-weight: bold;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px; /* espaço entre ícone e texto */
+  transition: background 0.2s, transform 0.1s;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.infowindow button:hover {
+  transform: translateY(-1px);
+}
+
+.infowindow .btn-escolher {
+  background-color: #007bff;
+  color: #fff;
+}
+
+.infowindow .btn-escolher:hover {
+  background-color: #0056b3;
+}
+
+.infowindow .btn-finalizar {
+  background-color: #16a34a;
+  color: #fff;
+}
+
+.infowindow .btn-finalizar:hover {
+  background-color: #0f7c33;
+}
+
+.infowindow .btn-falha {
+  background-color: #dc2626;
+  color: #fff;
+}
+
+.infowindow .btn-falha:hover {
+  background-color: #a61c1c;
+}
+
+/* =========================
+   Ajustes para telas pequenas
+=========================== */
+@media (max-width: 480px) {
+  .infowindow p { display: none; } /* esconde textos */
+  .infowindow button {
+    width: 80%;          /* deixa margem maior nas laterais */
+    font-size: 10px;     /* fonte menor, ainda legível */
+    padding: 3px 0;      /* altura mínima confortável para toque */
+    margin: 2px auto 0 auto; /* centraliza e espaça entre os botões */
+    display: block;
+    white-space: nowrap; /* evita scroll horizontal */
+  }
+}

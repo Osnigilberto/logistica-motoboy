@@ -53,7 +53,7 @@ export default function PaginaEntregaEmAndamento() {
   }, [id, db, router])
 
   /* =========================
-     2. Inicializar mapa
+     2. Inicializar mapa + marcador da origem
   ============================ */
   useEffect(() => {
     if (!entrega || typeof window.google === 'undefined') return
@@ -61,21 +61,47 @@ export default function PaginaEntregaEmAndamento() {
     const mapInstance = new google.maps.Map(mapRef.current, {
       zoom: 14,
       center: { lat: -27.5954, lng: -48.548 },
+      gestureHandling: 'greedy',
     })
     setMap(mapInstance)
 
+    // Renderer para rota
     const directionsDisplay = new google.maps.DirectionsRenderer({ suppressMarkers: true })
     directionsDisplay.setMap(mapInstance)
     setDirectionsRenderer(directionsDisplay)
+
+    // Marcar a origem
+    if (entrega.origem) {
+      const geocoder = new google.maps.Geocoder()
+      geocoder.geocode({ address: entrega.origem }, (results, status) => {
+        if (status === 'OK') {
+          new google.maps.Marker({
+            position: results[0].geometry.location,
+            map: mapInstance,
+            title: 'Origem',
+            label: { text: 'O', color: '#fff', fontWeight: 'bold' },
+            icon: {
+              path: google.maps.SymbolPath.CIRCLE,
+              scale: 12,
+              fillColor: '#16a34a',
+              fillOpacity: 1,
+              strokeColor: '#fff',
+              strokeWeight: 2,
+            },
+          })
+          mapInstance.setCenter(results[0].geometry.location)
+        } else {
+          console.error('Erro ao geocodificar origem:', status)
+        }
+      })
+    }
   }, [entrega])
 
   /* =========================
      3. Criar marcadores das paradas
   ============================ */
   useEffect(() => {
-    if (map && entrega) {
-      criarMarcadoresParadas()
-    }
+    if (map && entrega) criarMarcadoresParadas()
   }, [map, entrega, paradasStatus])
 
   const criarMarcadoresParadas = async () => {
@@ -102,6 +128,8 @@ export default function PaginaEntregaEmAndamento() {
                     ? '#16a34a'
                     : paradasStatus[i] === 'em andamento'
                     ? '#007bff'
+                    : paradasStatus[i] === 'falha'
+                    ? '#dc2626'
                     : '#facc15',
                 fillOpacity: 1,
                 strokeColor: '#fff',
@@ -109,11 +137,46 @@ export default function PaginaEntregaEmAndamento() {
               },
             })
             markers.push(marker)
+
+            // InfoWindow com domready para ligar os eventos
+            const infoWindow = new google.maps.InfoWindow({
+              content: `
+                <div class="infowindow">
+                  <p><strong>Parada ${i + 1}:</strong> ${endereco}</p>
+                  <p>👤 <strong>Destinatário:</strong> ${entrega.destinatarios[i]?.nome || '-'}</p>
+                  <p>📞 <strong>Telefone:</strong> ${entrega.destinatarios[i]?.telefone || '-'}</p>
+                  ${paradasStatus[i] === 'pendente' ? `<button id="btn-escolher-${i}" class="btn-escolher">📍 Escolher</button>` : ''}
+                  ${(paradasStatus[i] === 'em andamento' || paradasStatus[i] === 'pendente') ? `
+                    <button id="btn-finalizar-sucesso-${i}" class="btn-finalizar">✅ Entregue</button>
+                    <button id="btn-finalizar-falha-${i}" class="btn-falha">❌ Não entregue</button>
+                  ` : ''}
+                </div>
+              `
+            })
+
+
+            marker.addListener('click', () => {
+              infoWindow.open(map, marker)
+
+              // ⚡ Eventos do InfoWindow
+              google.maps.event.addListenerOnce(infoWindow, 'domready', () => {
+                const escolherBtn = document.getElementById(`btn-escolher-${i}`)
+                if (escolherBtn) escolherBtn.onclick = () => escolherParada(i)
+
+                const finalizarSucessoBtn = document.getElementById(`btn-finalizar-sucesso-${i}`)
+                if (finalizarSucessoBtn) finalizarSucessoBtn.onclick = () => finalizarParada(i, true)
+
+                const finalizarFalhaBtn = document.getElementById(`btn-finalizar-falha-${i}`)
+                if (finalizarFalhaBtn) finalizarFalhaBtn.onclick = () => finalizarParada(i, false)
+              })
+            })
+
             resolve()
           } else reject(status)
         })
       })
     }
+
     setParadasMarkers(markers)
   }
 
@@ -241,53 +304,44 @@ export default function PaginaEntregaEmAndamento() {
   /* =========================
      8. Finalizar parada via Cloud Function
   ============================ */
-  const finalizarParada = async index => {
-  if (!entrega?.id || !entrega?.motoboyId) {
-    toast.error('Entrega ou motoboy não definidos!')
-    return
-  }
-
-  // Garantir que paradaIndex seja número válido
-  const paradaIndex = Number(index)
-  if (isNaN(paradaIndex) || paradaIndex < 0 || paradaIndex >= entrega.destinos.length) {
-    toast.error('Índice de parada inválido!')
-    return
-  }
-
-  try {
-    // Debug: ver exatamente o que será enviado
-    const payload = {
-      entregaId: entrega.id,
-      motoboyId: entrega.motoboyId,
-      paradaIndex
+  const finalizarParada = async (index, entregue) => {
+    if (!entrega?.id || !entrega?.motoboyId) {
+      toast.error('Entrega ou motoboy não definidos!')
+      return
     }
-    console.log('Enviando para Cloud Function:', payload)
 
-    const finalizarFn = httpsCallable(functions, 'finalizarEntrega')
-    const result = await finalizarFn(payload)
+    const paradaIndex = Number(index)
+    if (isNaN(paradaIndex) || paradaIndex < 0 || paradaIndex >= entrega.destinos.length) {
+      toast.error('Índice de parada inválido!')
+      return
+    }
 
-    console.log('Resposta da função:', result.data)
-    toast.success(result.data?.message || 'Parada finalizada com sucesso!')
+    try {
+      const payload = {
+        entregaId: entrega.id,
+        motoboyId: entrega.motoboyId,
+        paradaIndex: paradaIndex,
+        entregue
+      }
+      const finalizarFn = httpsCallable(functions, 'finalizarEntrega')
+      const result = await finalizarFn(payload)
+      toast.success(result.data?.message || (entregue ? 'Parada finalizada com sucesso!' : 'Parada marcada como não entregue'))
 
-    setParadasStatus(prev => {
-  const novaStatus = [...prev]
-  novaStatus[paradaIndex] = 'concluída'
+      setParadasStatus(prev => {
+        const novaStatus = [...prev]
+        novaStatus[paradaIndex] = entregue ? 'concluída' : 'falha'
+        if (novaStatus.every(status => status === 'concluída' || status === 'falha')) {
+          router.push('/motoboy/entregas-em-andamento')
+        }
+        return novaStatus
+      })
+      setParadaAtualIndex(null)
 
-  // Se todas finalizadas, redireciona
-  if (novaStatus.every(status => status === 'concluída')) {
-    router.push('/motoboy/entregas-em-andamento')
+    } catch (error) {
+      console.error('Erro ao finalizar parada:', error)
+      toast.error('Erro ao finalizar parada!')
+    }
   }
-
-  return novaStatus
-})
-setParadaAtualIndex(null)
-
-  } catch (error) {
-    console.error('Erro ao finalizar parada:', error)
-    toast.error('Erro ao finalizar parada!')
-  }
-}
-
 
   /* =========================
      Render
@@ -316,15 +370,17 @@ setParadaAtualIndex(null)
             key={i}
             className={`${styles.paradaItem} ${
               paradasStatus[i] === 'pendente'
-                ? 'pendente'
+                ? ''
                 : paradasStatus[i] === 'em andamento'
                 ? 'emAndamento'
-                : 'concluida'
+                : paradasStatus[i] === 'concluida'
+                ? 'concluida'
+                : 'falha'
             }`}
           >
             <p><strong>Parada {i + 1}:</strong> {dest}</p>
-            <p><strong>Destinatário:</strong> {entrega.destinatarios[i]?.nome}</p>
-            <p><strong>Telefone:</strong> {entrega.destinatarios[i]?.telefone}</p>
+            <p><strong>Destinatário:</strong> {entrega.destinatarios[i]?.nome || '-'}</p>
+            <p><strong>Telefone:</strong> {entrega.destinatarios[i]?.telefone || '-'}</p>
 
             {paradasStatus[i] === 'pendente' && (
               <button className={`${styles.botaoAcao} ${styles.botaoEscolher}`} onClick={() => escolherParada(i)}>
@@ -332,10 +388,15 @@ setParadaAtualIndex(null)
               </button>
             )}
 
-            {paradasStatus[i] === 'em andamento' && (
-              <button className={`${styles.botaoAcao} ${styles.botaoFinalizar}`} onClick={() => finalizarParada(i)}>
-                ✅ Finalizar Parada
-              </button>
+            {(paradasStatus[i] === 'em andamento' || paradasStatus[i] === 'pendente') && (
+              <>
+                <button className={`${styles.botaoAcao} ${styles.botaoFinalizar}`} onClick={() => finalizarParada(i, true)}>
+                  ✅ Entregue
+                </button>
+                <button className={`${styles.botaoAcao} ${styles.botaoFalha}`} onClick={() => finalizarParada(i, false)}>
+                  ❌ Não entregue
+                </button>
+              </>
             )}
           </div>
         ))}

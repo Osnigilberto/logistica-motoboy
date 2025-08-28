@@ -108,20 +108,75 @@ export default function Dashboard() {
     return entregasComNomes;
   }
 
-  async function fetchRankingSemanal() {
-    const semanaId = getSemanaId();
-    const rankingRef = doc(db, 'ranking', semanaId);
-    const snap = await getDoc(rankingRef);
-    if (snap.exists()) setRanking(snap.data().listaMotoboys || []);
-    else setRanking([]);
-  }
-
   const getSemanaId = () => {
     const hoje = new Date();
     const ano = hoje.getFullYear();
     const semana = Math.ceil((((hoje - new Date(ano, 0, 1)) / 86400000 + hoje.getDay() + 1) / 7));
     return `${ano}-W${semana}`;
   };
+
+  /* ======================
+     Ranking otimizado: Top 10 + usuário logado
+  ====================== */
+  async function fetchRankingSemanal() {
+    const semanaId = getSemanaId();
+    const rankingRef = doc(db, 'ranking', semanaId);
+    const snap = await getDoc(rankingRef);
+
+    if (!snap.exists()) {
+      setRanking([]);
+      return;
+    }
+
+    const listaCompleta = snap.data().listaMotoboys || [];
+
+    // Top 10
+    const top10 = listaCompleta.slice(0, 10);
+
+    // Verificar se o usuário logado está fora do Top 10
+    let usuarioLogado = null;
+    if (user) {
+      usuarioLogado = listaCompleta.find(m => m.motoboyId === user.uid);
+    }
+
+    // Lista de motoboys a buscar o nome (Top10 + logado se não estiver no top 10)
+    const motoboysParaBuscar = [...top10];
+    if (usuarioLogado && !top10.some(m => m.motoboyId === user.uid)) {
+      motoboysParaBuscar.push(usuarioLogado);
+    }
+
+    // Buscar nomes apenas desses motoboys
+    const nomesCache = {};
+    await Promise.all(
+      motoboysParaBuscar.map(async (m) => {
+        try {
+          const snapUser = await getDoc(doc(db, 'users', m.motoboyId));
+          nomesCache[m.motoboyId] = snapUser.exists() ? snapUser.data().nome || 'Motoboy' : m.motoboyId;
+        } catch {
+          nomesCache[m.motoboyId] = m.motoboyId;
+        }
+      })
+    );
+
+    // Mapear Top10 e logado para exibição
+    const rankingExibicao = top10.map((m, i) => ({
+      posicao: i + 1,
+      motoboyId: m.motoboyId,
+      nome: nomesCache[m.motoboyId],
+      pontos: m.pontos,
+    }));
+
+    if (usuarioLogado && !top10.some(m => m.motoboyId === user.uid)) {
+      rankingExibicao.push({
+        posicao: listaCompleta.findIndex(m => m.motoboyId === user.uid) + 1,
+        motoboyId: usuarioLogado.motoboyId,
+        nome: nomesCache[usuarioLogado.motoboyId],
+        pontos: usuarioLogado.pontos,
+      });
+    }
+
+    setRanking(rankingExibicao);
+  }
 
   /* ======================
      useEffect principal
@@ -138,15 +193,13 @@ export default function Dashboard() {
           setEntregasPorDiaSemana(agruparPorDiaDaSemana(entregas));
 
           if (!isCliente) {
-            // Motoboy: filtrando entregas em andamento
             const emAndamento = entregas.filter((e) => e.status === 'em andamento');
             setEntregasEmAndamento(emAndamento);
 
-            // Atualizar KM total (somando campo kmPercorridosAtual)
             const kmTotal = emAndamento.reduce((acc, e) => acc + (e.kmPercorridosAtual || 0), 0);
             setKmHoje(kmTotal);
 
-            // Buscar ranking semanal
+            // Ranking otimizado
             await fetchRankingSemanal();
           }
 
@@ -180,6 +233,9 @@ export default function Dashboard() {
       </main>
     );
 
+  /* ======================
+     Render
+  ====================== */
   return (
     <DashboardLayout userType={userType}>
       <h1 className={styles.title}>
@@ -223,15 +279,41 @@ export default function Dashboard() {
       {!isCliente && ranking.length > 0 && (
         <section className={styles.rankingSection}>
           <h3>Ranking da Semana</h3>
-          <ul className={styles.rankingList}>
-            {ranking.map((m, i) => (
-              <li key={m.motoboyId}>
-                <strong>{i + 1}º:</strong> {m.motoboyId} — {m.pontos} pts
-              </li>
-            ))}
-          </ul>
+          <div className={styles.tableWrapper}>
+            <table className={styles.rankingTable}>
+              <thead>
+                <tr>
+                  <th>Posição</th>
+                  <th>Motoboy</th>
+                  <th>Pontos</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ranking.map((m, index) => {
+                  const medal =
+                    index === 0 ? "🥇" :
+                    index === 1 ? "🥈" :
+                    index === 2 ? "🥉" : "";
+
+                  const rowClass =
+                    index === 0 ? styles.rank1 :
+                    index === 1 ? styles.rank2 :
+                    index === 2 ? styles.rank3 : "";
+
+                  return (
+                    <tr key={m.motoboyId} className={rowClass}>
+                      <td>{m.posicao}º {medal}</td>
+                      <td>{m.nome}</td>
+                      <td>{m.pontos}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </section>
       )}
+
 
       {/* Gráficos e últimas entregas */}
       <section className={styles.graphSection}>
