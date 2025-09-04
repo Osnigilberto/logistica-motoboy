@@ -2,11 +2,21 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import {
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  increment,
+  serverTimestamp
+} from 'firebase/firestore';
 import { db } from '@/firebase/firebaseClient';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { FaMapMarkerAlt, FaClock, FaMoneyBillWave } from 'react-icons/fa';
 import MapaEntrega from '@/app/components/MapaEntrega';
+import { gerarCodigoEntrega } from '@/app/utils/gerarCodigoEntrega';
 import styles from './novaEntrega.module.css';
 import VMasker from 'vanilla-masker';
 
@@ -28,7 +38,9 @@ export default function NovaEntregaPage() {
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState('');
 
-  // Autenticação
+  // ===============================
+  // 🔹 Autenticação do usuário
+  // ===============================
   useEffect(() => {
     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -38,10 +50,14 @@ export default function NovaEntregaPage() {
     return () => unsubscribe();
   }, [router]);
 
+  // ===============================
+  // 🔹 Funções auxiliares
+  // ===============================
   const aplicarMascaraTelefone = (valor) =>
     VMasker.toPattern(valor.replace(/\D/g, ''), '(99) 99999-9999');
 
-  const handleChange = (e) => setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  const handleChange = (e) =>
+    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
 
   const handleDestinoChange = (index, value) => {
     const novosDestinos = [...destinos];
@@ -65,19 +81,102 @@ export default function NovaEntregaPage() {
     setDestinatarios(novos);
   };
 
-  // Recalcular valores sempre que distância ou destinos mudam
+  // ===============================
+  // 🔹 Recalcular valores da entrega
+  // ===============================
   useEffect(() => {
-    if (!distanciaKm) return;
-    const taxaParadas = destinos.length > 1 ? (destinos.length - 1) * 3.0 : 0;
-    const cliente = distanciaKm * 1.7 + taxaParadas;
-    const motoboy = distanciaKm * 1.5 + taxaParadas;
-    const plataforma = cliente - motoboy;
-    setValorCliente(cliente);
-    setValorMotoboy(motoboy);
-    setValorPlataforma(plataforma);
-  }, [distanciaKm, destinos]);
+  if (!distanciaKm) return; // sai se não houver distância
 
-  const handleSubmit = async (e) => {
+  // 1️⃣ Taxa de paradas extras (a partir da segunda)
+  const taxaParadas = destinos.length > 1 ? (destinos.length - 1) * 3.0 : 0;
+
+  // 2️⃣ Valor do cliente
+  let valorCliente = 0;
+  if (distanciaKm <= 5) {
+    valorCliente = 9; // fixo até 5 km
+  } else {
+    valorCliente = distanciaKm * 1.7; // acima de 5 km
+  }
+  valorCliente += taxaParadas; // adiciona paradas extras
+
+  // 3️⃣ Valor do motoboy
+  let valorMotoboy = 0;
+  if (distanciaKm <= 5) {
+    valorMotoboy = 8; // fixo até 5 km
+  } else {
+    valorMotoboy = distanciaKm * 1.5; // acima de 5 km
+  }
+  valorMotoboy += taxaParadas; // adiciona paradas extras
+
+  // 4️⃣ Valor da plataforma
+  let valorPlataforma = 0;
+  if (distanciaKm <= 5) {
+    valorPlataforma = 1; // fixo até 5 km
+  } else {
+    valorPlataforma = distanciaKm * 0.2; // acima de 5 km
+  }
+
+  // 5️⃣ Atualiza estados
+  setValorCliente(valorCliente);
+  setValorMotoboy(valorMotoboy);
+  setValorPlataforma(valorPlataforma);
+}, [distanciaKm, destinos]);
+
+
+  // ===============================
+  // 🔹 Função para gerar prefixo único da loja
+  // ===============================
+  const gerarPrefixo = async (nomeEmpresa) => {
+    if (!nomeEmpresa) return 'LOJA';
+
+    const nomeLimpo = nomeEmpresa
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, '')
+      .toUpperCase();
+
+    let prefixo = nomeLimpo.substring(0, 4);
+
+    const prefixDocRef = doc(db, 'lojaPrefixes', prefixo);
+    const prefixSnap = await getDoc(prefixDocRef);
+
+    if (!prefixSnap.exists()) {
+      await setDoc(prefixDocRef, { contador: 0 });
+      return prefixo;
+    } else {
+      const contador = prefixSnap.data().contador + 1;
+      await updateDoc(prefixDocRef, { contador: increment(1) });
+      return `${prefixo}${contador}`;
+    }
+  };
+
+  // ===============================
+  // 🔹 Função para gerar código único da entrega
+  // Formato: PREFIXO-EANO-0001
+  // ===============================
+  const gerarCodigoEntrega = async (nomeEmpresa) => {
+    const prefixo = await gerarPrefixo(nomeEmpresa);
+    const ano = new Date().getFullYear();
+
+    const counterDocRef = doc(db, 'entregaCounters', `${prefixo}-${ano}`);
+    const counterSnap = await getDoc(counterDocRef);
+
+    let sequencia = 1;
+
+    if (counterSnap.exists()) {
+      sequencia = counterSnap.data().contador + 1;
+      await updateDoc(counterDocRef, { contador: increment(1) });
+    } else {
+      await setDoc(counterDocRef, { contador: 1 });
+    }
+
+    const sequenciaFormatada = sequencia.toString().padStart(4, '0');
+    return `${prefixo}-E${ano}-${sequenciaFormatada}`;
+  };
+
+  // ===============================
+  // 🔹 Envio do formulário
+  // ===============================
+    const handleSubmit = async (e) => {
     e.preventDefault();
 
     // Validação
@@ -98,7 +197,16 @@ export default function NovaEntregaPage() {
 
     setLoading(true);
     setErro('');
+
     try {
+      // 1️⃣ Pega o nomeEmpresa do usuário logado
+      const clienteSnap = await getDoc(doc(db, 'users', userId));
+      const nomeEmpresa = clienteSnap.exists() ? clienteSnap.data().nomeEmpresa || 'LOJA' : 'LOJA';
+
+      // 2️⃣ Gera o código da entrega automaticamente
+      const codigoEntrega = await gerarCodigoEntrega(nomeEmpresa);
+
+      // 3️⃣ Cria a entrega com código
       await addDoc(collection(db, 'entregas'), {
         clienteId: userId,
         origem: form.origem.trim(),
@@ -113,9 +221,12 @@ export default function NovaEntregaPage() {
         numeroParadas: destinos.length,
         status: 'ativo',
         motoboyId: '',
+        codigoEntrega, // 🔹 aqui
         criadoEm: serverTimestamp(),
       });
+
       router.push('/dashboard');
+
     } catch (err) {
       console.error('Erro ao criar entrega:', err);
       setErro('Erro ao criar entrega. Tente novamente.');
@@ -124,6 +235,10 @@ export default function NovaEntregaPage() {
     }
   };
 
+
+  // ===============================
+  // 🔹 Renderização
+  // ===============================
   return (
     <main className={styles.container}>
       <button type="button" onClick={() => router.back()} className={styles.buttonBack}>← Voltar</button>

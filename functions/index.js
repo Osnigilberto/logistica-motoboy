@@ -3,6 +3,7 @@
 // ===============================
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
+const nodemailer = require("nodemailer");
 
 // Inicializa o Firebase Admin SDK
 admin.initializeApp();
@@ -121,5 +122,40 @@ exports.finalizarEntrega = functions.https.onCall(async (data, context) => {
   } catch (err) {
     console.error("❌ Erro na função finalizarEntrega:", err);
     throw new functions.https.HttpsError("internal", "Erro ao finalizar entrega: " + err.message);
+  }
+});
+
+// ===============================
+// 🔹 FUNÇÃO: ENVIAR EMAIL DE CONTATO (V3)
+// ===============================
+const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: "rootedtch@gmail.com",
+    pass: "mofb skds kdun qeha",
+  },
+});
+
+exports.sendContactEmail = onDocumentCreated("contatos/{docId}", async (event) => {
+  const data = event.data;
+
+  const mailOptions = {
+    from: "rootedtch@gmail.com",
+    to: "rootedtch@gmail.com",
+    subject: `Nova mensagem de ${data.nome}`,
+    html: `
+      <p><strong>Nome:</strong> ${data.nome}</p>
+      <p><strong>Email:</strong> ${data.email}</p>
+      <p><strong>Mensagem:</strong><br/>${data.mensagem}</p>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log("✅ Email de contato enviado com sucesso!");
+  } catch (err) {
+    console.error("❌ Erro ao enviar email:", err);
   }
 });

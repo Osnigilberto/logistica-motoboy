@@ -44,7 +44,7 @@ export default function Dashboard() {
     : profile?.nome?.trim() || 'Motoboy';
 
   /* ======================
-     Funções para buscar dados
+     FUNÇÕES DE DADOS
   ====================== */
   async function fetchEntregasPorUsuario(uid, tipo) {
     const entregasRef = collection(db, 'entregas');
@@ -79,6 +79,9 @@ export default function Dashboard() {
     return dias.map((dia, i) => ({ dia, entregas: contagem[i] }));
   }
 
+  /* ======================
+     PEGAR ÚLTIMAS ENTREGAS
+  ====================== */
   async function pegarUltimasEntregas(entregas, limite = 5) {
     const ordenadas = entregas
       .sort((a, b) => {
@@ -102,7 +105,8 @@ export default function Dashboard() {
             if (snap.exists()) nomeMotoboy = snap.data().nome || 'Motoboy';
           }
         } catch {}
-        return { ...entrega, nomeCliente, nomeMotoboy };
+        // Garante que cada entrega tenha um código único
+        return { ...entrega, nomeCliente, nomeMotoboy, codigoEntrega: entrega.codigoEntrega || entrega.id };
       })
     );
     return entregasComNomes;
@@ -116,7 +120,7 @@ export default function Dashboard() {
   };
 
   /* ======================
-     Ranking otimizado: Top 10 + usuário logado
+     Ranking Semanal
   ====================== */
   async function fetchRankingSemanal() {
     const semanaId = getSemanaId();
@@ -129,23 +133,14 @@ export default function Dashboard() {
     }
 
     const listaCompleta = snap.data().listaMotoboys || [];
-
-    // Top 10
     const top10 = listaCompleta.slice(0, 10);
 
-    // Verificar se o usuário logado está fora do Top 10
     let usuarioLogado = null;
-    if (user) {
-      usuarioLogado = listaCompleta.find(m => m.motoboyId === user.uid);
-    }
+    if (user) usuarioLogado = listaCompleta.find(m => m.motoboyId === user.uid);
 
-    // Lista de motoboys a buscar o nome (Top10 + logado se não estiver no top 10)
     const motoboysParaBuscar = [...top10];
-    if (usuarioLogado && !top10.some(m => m.motoboyId === user.uid)) {
-      motoboysParaBuscar.push(usuarioLogado);
-    }
+    if (usuarioLogado && !top10.some(m => m.motoboyId === user.uid)) motoboysParaBuscar.push(usuarioLogado);
 
-    // Buscar nomes apenas desses motoboys
     const nomesCache = {};
     await Promise.all(
       motoboysParaBuscar.map(async (m) => {
@@ -158,7 +153,6 @@ export default function Dashboard() {
       })
     );
 
-    // Mapear Top10 e logado para exibição
     const rankingExibicao = top10.map((m, i) => ({
       posicao: i + 1,
       motoboyId: m.motoboyId,
@@ -187,19 +181,16 @@ export default function Dashboard() {
         setLoadingData(true);
         try {
           const entregas = await fetchEntregasPorUsuario(user.uid, profile.tipo);
-
           setEntregasStatusData(agruparPorStatus(entregas));
           setUltimasEntregas(await pegarUltimasEntregas(entregas));
           setEntregasPorDiaSemana(agruparPorDiaDaSemana(entregas));
 
-          if (!isCliente) {
-            const emAndamento = entregas.filter((e) => e.status === 'em andamento');
-            setEntregasEmAndamento(emAndamento);
+          const emAndamento = entregas.filter((e) => e.status === 'em andamento');
+          setEntregasEmAndamento(emAndamento);
 
+          if (!isCliente) {
             const kmTotal = emAndamento.reduce((acc, e) => acc + (e.kmPercorridosAtual || 0), 0);
             setKmHoje(kmTotal);
-
-            // Ranking otimizado
             await fetchRankingSemanal();
           }
 
@@ -207,11 +198,13 @@ export default function Dashboard() {
             const count = await fetchMotoboysAtivos(user.uid);
             setMotoboysAtivosCount(count);
           } else setMotoboysAtivosCount(0);
+
         } catch (err) {
           console.error(err);
         }
         setLoadingData(false);
       }
+
       carregarDados();
     } else if (!loading && !user) router.push('/login');
     else if (!loading && user && !profile) router.push('/completar-perfil');
@@ -234,7 +227,8 @@ export default function Dashboard() {
     );
 
   /* ======================
-     Render
+     RENDER
+     Corrigido para evitar nós de texto em <tr>
   ====================== */
   return (
     <DashboardLayout userType={userType}>
@@ -243,6 +237,7 @@ export default function Dashboard() {
         <span className={styles.badge}>{isCliente ? 'Cliente' : 'Motoboy'}</span>
       </h1>
 
+      {/* KPIs */}
       <section className={styles.kpiSection}>
         {!isCliente && (
           <>
@@ -258,7 +253,7 @@ export default function Dashboard() {
         )}
         <div className={styles.kpiCard}>
           <h3>Entregas em andamento</h3>
-          <p>{entregasEmAndamento.length || entregasEmAndamento}</p>
+          <p>{entregasEmAndamento.length || 0}</p>
         </div>
         <div className={styles.kpiCard}>
           <h3>Entregas atrasadas</h3>
@@ -276,6 +271,7 @@ export default function Dashboard() {
         )}
       </section>
 
+      {/* Ranking */}
       {!isCliente && ranking.length > 0 && (
         <section className={styles.rankingSection}>
           <h3>Ranking da Semana</h3>
@@ -290,21 +286,13 @@ export default function Dashboard() {
               </thead>
               <tbody>
                 {ranking.map((m, index) => {
-                  const medal =
-                    index === 0 ? "🥇" :
-                    index === 1 ? "🥈" :
-                    index === 2 ? "🥉" : "";
-
-                  const rowClass =
-                    index === 0 ? styles.rank1 :
-                    index === 1 ? styles.rank2 :
-                    index === 2 ? styles.rank3 : "";
-
+                  const medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "";
+                  const rowClass = index === 0 ? styles.rank1 : index === 1 ? styles.rank2 : index === 2 ? styles.rank3 : "";
                   return (
                     <tr key={m.motoboyId} className={rowClass}>
                       <td>{m.posicao}º {medal}</td>
-                      <td>{m.nome}</td>
-                      <td>{m.pontos}</td>
+                      <td>{m.nome || '-'}</td>
+                      <td>{m.pontos || 0}</td>
                     </tr>
                   );
                 })}
@@ -314,8 +302,7 @@ export default function Dashboard() {
         </section>
       )}
 
-
-      {/* Gráficos e últimas entregas */}
+      {/* Gráficos */}
       <section className={styles.graphSection}>
         <div className={styles.graphCard}>
           <h3>Entregas por status</h3>
@@ -354,6 +341,7 @@ export default function Dashboard() {
         </div>
       </section>
 
+      {/* Últimas entregas */}
       <section className={styles.tableSection}>
         <h3>Últimas entregas</h3>
         {ultimasEntregas.length === 0 ? (
@@ -362,8 +350,8 @@ export default function Dashboard() {
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Cliente</th>
+                <th>Código</th>
+                <th>Destinatários</th>
                 <th>Motoboy</th>
                 <th>Status</th>
                 <th>Data</th>
@@ -372,16 +360,17 @@ export default function Dashboard() {
             <tbody>
               {ultimasEntregas.map((entrega) => (
                 <tr key={entrega.id}>
-                  <td>{entrega.id}</td>
-                  <td>{entrega.nomeCliente || 'N/D'}</td>
-                  <td>{entrega.nomeMotoboy || 'N/D'}</td>
-                  <td>{entrega.status}</td>
-                  <td>
-                    {entrega.criadoEm
-                      ? entrega.criadoEm.toDate
-                        ? entrega.criadoEm.toDate().toLocaleDateString()
-                        : new Date(entrega.criadoEm).toLocaleDateString()
-                      : 'N/D'}
+                  <td>{entrega.codigoEntrega || '-'}</td>
+                  <td>{entrega.destinatarios && entrega.destinatarios.length > 0
+                ? entrega.destinatarios.map(d => d.nome).join(', ')
+                : 'Sem destinatários'}</td>
+                  <td>{entrega.nomeMotoboy || '-'}</td>
+                  <td>{entrega.status || '-'}</td>
+                  <td>{entrega.criadoEm
+                    ? entrega.criadoEm.toDate
+                      ? entrega.criadoEm.toDate().toLocaleDateString()
+                      : new Date(entrega.criadoEm).toLocaleDateString()
+                    : '-'}
                   </td>
                 </tr>
               ))}
@@ -390,12 +379,11 @@ export default function Dashboard() {
         )}
       </section>
 
+      {/* Status do motoboy */}
       {!isCliente && (
         <section className={styles.statusSection}>
           <h3>Status</h3>
-          <p>
-            Atual: <strong>{isAvailable ? 'Disponível' : 'Ocupado'}</strong>
-          </p>
+          <p>Atual: <strong>{isAvailable ? 'Disponível' : 'Ocupado'}</strong></p>
           <button className={styles.button} onClick={toggleAvailability}>
             {isAvailable ? 'Ficar ocupado' : 'Ficar disponível'}
           </button>

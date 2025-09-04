@@ -11,6 +11,7 @@ import {
   updateDoc,
   doc,
   serverTimestamp,
+  getDoc
 } from 'firebase/firestore';
 import { db } from '../../../firebase/firebaseClient';
 import { toast } from 'react-toastify';
@@ -64,9 +65,24 @@ export default function EntregasDisponiveis() {
               where('motoboyId', '==', '')
             );
             const entregasSnapshot = await getDocs(entregasQuery);
-            entregasTemp = entregasTemp.concat(
-              entregasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+
+            const entregasChunk = await Promise.all(
+              entregasSnapshot.docs.map(async (docSnap) => {
+                const data = docSnap.data();
+                let nomeEmpresa = 'Desconhecido';
+                try {
+                  if (data.clienteId) {
+                    const snapCliente = await getDoc(doc(db, 'users', data.clienteId));
+                    if (snapCliente.exists()) {
+                      nomeEmpresa = snapCliente.data().nomeEmpresa || snapCliente.data().nome || 'Cliente';
+                    }
+                  }
+                } catch {}
+                return { id: docSnap.id, nomeEmpresa, ...data };
+              })
             );
+
+            entregasTemp = entregasTemp.concat(entregasChunk);
           }
 
           setEntregas(entregasTemp);
@@ -161,8 +177,8 @@ export default function EntregasDisponiveis() {
 
       <ul className={styles.list} aria-live="polite">
         {entregas.map(entrega => (
-          <li key={entrega.id} className={styles.item} tabIndex={0} aria-label={`Entrega ${entrega.id}`}>
-            <p><strong>ID:</strong> {entrega.id}</p>
+          <li key={entrega.id} className={styles.item} tabIndex={0} aria-label={`Entrega ${entrega.nomeEmpresa}`}>
+            <p><strong>Cliente:</strong> {entrega.nomeEmpresa || 'Desconhecido'}</p>
             <p><strong>Descrição:</strong> {entrega.descricao || '—'}</p>
             <p><strong>Origem:</strong> {entrega.origem || entrega.origemTexto || '—'}</p>
 

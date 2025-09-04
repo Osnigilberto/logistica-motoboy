@@ -122,6 +122,139 @@
   font-size: 1.1rem;
 }
 
+/* Pricing */
+.pricing {
+  text-align: center;
+  margin: 100px auto;
+  max-width: 1100px;
+  padding: 0 20px;
+}
+
+.pricing h2 {
+  margin-bottom: 40px;
+  font-size: 2.2rem;
+  color: #ca6c3d;
+}
+
+.pricingGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 25px;
+}
+
+.plan {
+  background: #faf7f2;
+  border-radius: 15px;
+  padding: 30px 20px;
+  box-shadow: 0 6px 15px rgba(0,0,0,0.05);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.plan:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+}
+
+.plan h3 {
+  color: #b2592e;
+  font-size: 1.5rem;
+  margin-bottom: 10px;
+}
+
+.plan p {
+  font-size: 0.95rem;
+  margin-bottom: 20px;
+  color: #666;
+}
+
+.plan .price {
+  font-size: 1.8rem;
+  font-weight: bold;
+  margin: 15px 0;
+  color: #ca6c3d;
+}
+
+.plan ul {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0;
+  flex: 1;
+}
+
+.plan ul li {
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.plan button {
+  background: #ca6c3d;
+  color: white;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.plan button:hover {
+  background: #b2592e;
+  transform: scale(1.03);
+}
+
+.plan.premium {
+  background: #fff5ef;
+  border: 2px solid #ca6c3d;
+  transform: scale(1.05);
+  box-shadow: 0 10px 25px rgba(202,108,61,0.25);
+}
+
+.plan.premium h3 {
+  color: #ca6c3d;
+}
+
+.tooltip {
+  cursor: pointer;
+  border-bottom: 1px dotted #555;
+  margin-left: 4px;
+  position: relative;
+}
+
+.tooltip:hover::after {
+  content: "Cobrança aplicada apenas quando o limite mensal for excedido.";
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #333;
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 4px;
+  white-space: nowrap;
+  font-size: 0.85rem;
+  z-index: 10;
+}
+
+.tooltip:hover::before {
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent transparent #333 transparent;
+}
+
+.tooltip:hover {
+  text-decoration: none;
+}
+
+
 /* Contact */
 .contact {
   background: #faf7f2;
@@ -240,5 +373,9 @@
 
   .feature {
     padding: 16px;
+  }
+
+  .pricingGrid {
+    grid-template-columns: 1fr;
   }
 }

@@ -12,6 +12,7 @@ import {
   where,
   getDocs,
   Timestamp,
+  updateDoc,
 } from 'firebase/firestore';
 import { toast } from 'react-toastify';
 import {
@@ -32,15 +33,13 @@ export default function StatusPage() {
   const [dados, setDados] = useState(null);
   const [totalEntregas, setTotalEntregas] = useState(0);
   const [saldoPendente, setSaldoPendente] = useState(0);
-  const [estatisticas, setEstatisticas] = useState({
-    distancia: 0,
-    tempoReal: 0,
-  });
+  const [estatisticas, setEstatisticas] = useState({ distancia: 0, tempoReal: 0 });
   const [rankingSemana, setRankingSemana] = useState([]);
 
   // Buscar dados do perfil
   async function buscarDados() {
     try {
+      if (!user?.uid) return;
       const docRef = doc(db, 'users', user.uid);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
@@ -64,16 +63,8 @@ export default function StatusPage() {
         entregasRef,
         where('motoboyId', '==', user.uid),
         where('status', '==', 'finalizada'),
-        where(
-          'criadoEm',
-          '>=',
-          Timestamp.fromDate(startOfWeek(new Date(), { weekStartsOn: 1 }))
-        ),
-        where(
-          'criadoEm',
-          '<=',
-          Timestamp.fromDate(endOfWeek(new Date(), { weekStartsOn: 1 }))
-        )
+        where('criadoEm', '>=', Timestamp.fromDate(startOfWeek(new Date(), { weekStartsOn: 1 }))),
+        where('criadoEm', '<=', Timestamp.fromDate(endOfWeek(new Date(), { weekStartsOn: 1 })))
       );
 
       const snapSemana = await getDocs(qSemana);
@@ -104,9 +95,7 @@ export default function StatusPage() {
       const semanaId = (() => {
         const hoje = new Date();
         const ano = hoje.getFullYear();
-        const semana = Math.ceil(
-          ((hoje - new Date(ano, 0, 1)) / 86400000 + hoje.getDay() + 1) / 7
-        );
+        const semana = Math.ceil(((hoje - new Date(ano, 0, 1)) / 86400000 + hoje.getDay() + 1) / 7);
         return `${ano}-W${semana}`;
       })();
 
@@ -115,7 +104,6 @@ export default function StatusPage() {
 
       if (rankingSnap.exists()) {
         const data = rankingSnap.data();
-        // Aqui buscamos os nomes dos motoboys
         const listaComNomes = await Promise.all(
           (data.listaMotoboys || []).map(async (item) => {
             try {
@@ -148,11 +136,7 @@ export default function StatusPage() {
 
     try {
       const entregasRef = collection(db, 'entregas');
-      const q = query(
-        entregasRef,
-        where('motoboyId', '==', user.uid),
-        where('status', '==', 'finalizada')
-      );
+      const q = query(entregasRef, where('motoboyId', '==', user.uid), where('status', '==', 'finalizada'));
       const snap = await getDocs(q);
 
       const totalEntregas = snap.size;
@@ -236,7 +220,7 @@ export default function StatusPage() {
       {/* Perfil e medalhas */}
       <section className={styles.perfil}>
         <img
-          src={user.photoURL || '/avatar-padrao.png'}
+          src={dados.photoURL || user.photoURL || '/avatar-padrao.png'}
           alt="Foto de perfil"
           className={styles.fotoPerfil}
         />
