@@ -65,9 +65,17 @@ export default function MapaEntrega({ origem, destinos, onInfoChange }) {
     const calcularRota = async () => {
       setLoading(true);
       try {
+        // Geocodifica origem
         const origemLoc = await geocodeAddress(origemDebounced);
-        const destinosLoc = await Promise.all(destinosValidos.map(geocodeAddress));
+        const origemLat = origemLoc.lat();
+        const origemLng = origemLoc.lng();
 
+        // Geocodifica destinos
+        const destinosLoc = await Promise.all(destinosValidos.map(geocodeAddress));
+        const destinosLat = destinosLoc.map(loc => loc.lat());
+        const destinosLng = destinosLoc.map(loc => loc.lng());
+
+        // Configura waypoints (todos menos o último, que é o destination)
         const waypoints = destinosLoc.slice(0, -1).map((loc) => ({ location: loc }));
 
         const request = {
@@ -93,9 +101,19 @@ export default function MapaEntrega({ origem, destinos, onInfoChange }) {
 
             const custo = calcularCusto(distanciaTotal, destinosLoc.length);
 
-            const novaInfo = { distanciaKm: distanciaTotal, tempoMin: tempoTotal, custo };
+            // ✅ NOVO: Inclui coordenadas no retorno
+            const novaInfo = {
+              distanciaKm: distanciaTotal,
+              tempoMin: tempoTotal,
+              custo,
+              origemLat,
+              origemLng,
+              destinosLat,
+              destinosLng
+            };
+
             setInfo(novaInfo);
-            onInfoChange(novaInfo);
+            onInfoChange(novaInfo); // ✅ Agora retorna coordenadas!
           } else if (status === 'ZERO_RESULTS') {
             toast.error('Rota inválida: endereço não encontrado.');
           } else {

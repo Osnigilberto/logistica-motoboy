@@ -32,11 +32,16 @@ export default function NovaEntregaPage() {
   const [tempoMin, setTempoMin] = useState(null);
 
   const [valorCliente, setValorCliente] = useState(null);
-  const [valorMotoboy, setValorMotoboy] = useState(null);
-  const [valorPlataforma, setValorPlataforma] = useState(null);
+  const [valorMotoboy, setValorMotoboy] = useState(0);
+  const [valorPlataforma, setValorPlataforma] = useState(0);
 
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState('');
+
+  const [origemLat, setOrigemLat] = useState(null);
+  const [origemLng, setOrigemLng] = useState(null);
+  const [destinosLat, setDestinosLat] = useState([]);
+  const [destinosLng, setDestinosLng] = useState([]);
 
   // ===============================
   // 🔹 Autenticação do usuário
@@ -208,22 +213,26 @@ export default function NovaEntregaPage() {
 
       // 3️⃣ Cria a entrega com código
       await addDoc(collection(db, 'entregas'), {
-        clienteId: userId,
-        origem: form.origem.trim(),
-        destinos: destinos.map(d => d.trim()),
-        destinatarios: destinatarios.map(d => ({ nome: d.nome.trim(), telefone: d.telefone.trim() })),
-        descricao: form.descricao.trim(),
-        distanciaKm,
-        tempoMin,
-        valorCliente,
-        valorMotoboy,
-        valorPlataforma,
-        numeroParadas: destinos.length,
-        status: 'ativo',
-        motoboyId: '',
-        codigoEntrega, // 🔹 aqui
-        criadoEm: serverTimestamp(),
-      });
+      clienteId: userId,
+      origem: form.origem.trim(),
+      origemLat,           // ✅ Adicionado
+      origemLng,           // ✅ Adicionado
+      destinos: destinos.map(d => d.trim()),
+      destinosLat,         // ✅ Adicionado
+      destinosLng,         // ✅ Adicionado
+      destinatarios: destinatarios.map(d => ({ nome: d.nome.trim(), telefone: d.telefone.trim() })),
+      descricao: form.descricao.trim(),
+      distanciaKm,
+      tempoMin,
+      valorCliente,
+      valorMotoboy,
+      valorPlataforma,
+      numeroParadas: destinos.length,
+      status: 'ativo',
+      motoboyId: '',
+      codigoEntrega,
+      criadoEm: serverTimestamp(),
+    });
 
       router.push('/dashboard');
 
@@ -291,9 +300,14 @@ export default function NovaEntregaPage() {
           <MapaEntrega
             origem={form.origem}
             destinos={destinos}
-            onInfoChange={({ distanciaKm, tempoMin }) => {
+            onInfoChange={({ distanciaKm, tempoMin, custo, origemLat, origemLng, destinosLat, destinosLng }) => {
               setDistanciaKm(distanciaKm);
               setTempoMin(tempoMin);
+              setValorCliente(custo); // se quiser manter o cálculo automático
+              setOrigemLat(origemLat);
+              setOrigemLng(origemLng);
+              setDestinosLat(destinosLat);
+              setDestinosLng(destinosLng);
               setErro('');
             }}
           />
