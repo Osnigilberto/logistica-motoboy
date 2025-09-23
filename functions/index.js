@@ -4,12 +4,15 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const nodemailer = require("nodemailer");
+require('dotenv').config(); // Carrega variáveis do arquivo .env
 
-// Inicializa o Firebase Admin SDK
 admin.initializeApp();
 const db = admin.firestore();
+const FieldValue = require('firebase-admin').firestore.FieldValue;
 
-// Função auxiliar para gerar o ID da semana (ranking semanal)
+// ===============================
+// 🔹 FUNÇÃO AUXILIAR: CALCULAR ID DA SEMANA
+// ===============================
 function getSemanaId() {
   const agora = new Date();
   const primeiroDiaDoAno = new Date(agora.getFullYear(), 0, 1);
@@ -20,20 +23,106 @@ function getSemanaId() {
 }
 
 // ===============================
-// 🔹 FUNÇÃO: FINALIZAR ENTREGA
+// 🔹 FUNÇÃO: LÓGICA FINALIZAR ENTREGA
 // ===============================
-exports.finalizarEntrega = functions.https.onCall(async (data, context) => {
-  console.log("📥 Dados recebidos na função:", data);
+async function finalizarEntregaLogic({ entregaId, motoboyId, paradaIndex }) {
+  console.log("📦 Finalizando entrega:", { entregaId, motoboyId, paradaIndex });
 
-  const { entregaId, motoboyId, paradaIndex } = data;
-
-  // 1️⃣ Validação dos parâmetros
   if (
     typeof entregaId !== "string" || !entregaId.trim() ||
     typeof motoboyId !== "string" || !motoboyId.trim() ||
     paradaIndex === undefined || paradaIndex === null
   ) {
-    console.error("❌ Falha na validação:", { entregaId, motoboyId, paradaIndex });
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "Parâmetros inválidos: entregaId, motoboyId e paradaIndex são obrigatórios."
+    );
+  }
+
+  const entregaRef = db.collection("entregas").doc(entregaId);
+  const entregaSnap = await entregaRef.get();
+  if (!entregaSnap.exists) {
+    throw new functions.https.HttpsError("not-found", "Entrega não encontrada");
+  }
+  const entrega = entregaSnap.data();
+
+  const totalParadas = entrega.destinos?.length || 0;
+  if (paradaIndex < 0 || paradaIndex >= totalParadas) {
+    throw new functions.https.HttpsError("out-of-range", "Parada inválida");
+  }
+
+  const paradasStatus = entrega.paradasStatus || Array(totalParadas).fill("pendente");
+  paradasStatus[paradaIndex] = "concluída";
+
+  const todasFinalizadas = paradasStatus.every((status) => status === "concluída");
+
+  const totalKm = entrega.kmPercorridos || 0;
+  const taxaParada = totalParadas > 1 ? (totalParadas - 1) * 3 : 0;
+  const valorEntregaCliente = totalKm <= 5 ? 9 : totalKm * 1.7 + taxaParada;
+  const valorEntregaMotoboy = totalKm <= 5 ? 8 : totalKm * 1.5 + taxaParada;
+  const lucroPlataforma = valorEntregaCliente - valorEntregaMotoboy;
+
+  const updateData = { paradasStatus };
+  if (todasFinalizadas) {
+    updateData.status = "finalizada";
+    updateData.finalizadoEm = admin.firestore.FieldValue.serverTimestamp();
+    updateData.kmPercorridos = totalKm;
+    updateData.valorEntregaCliente = valorEntregaCliente;
+    updateData.valorEntregaMotoboy = valorEntregaMotoboy;
+    updateData.lucroPlataforma = lucroPlataforma;
+  }
+  await entregaRef.update(updateData);
+
+  if (todasFinalizadas) {
+    const motoboyRef = db.collection("motoboys").doc(motoboyId);
+    const motoboySnap = await motoboyRef.get();
+    if (motoboySnap.exists) {
+      const motoboy = motoboySnap.data();
+      const novoSaldo = (motoboy.saldoDisponivel || 0) + valorEntregaMotoboy;
+      const novasEntregas = (motoboy.entregasConcluidas || 0) + 1;
+      const novosPontos = (motoboy.pontosSemana || 0) + 10;
+
+      await motoboyRef.update({
+        saldoDisponivel: novoSaldo,
+        entregasConcluidas: novasEntregas,
+        pontosSemana: novosPontos,
+      });
+
+      const semanaId = getSemanaId();
+      const rankingRef = db.collection("ranking").doc(semanaId);
+      const rankingSnap = await rankingRef.get();
+      let listaMotoboys = [];
+
+      if (rankingSnap.exists) {
+        listaMotoboys = rankingSnap.data().listaMotoboys || [];
+        const idx = listaMotoboys.findIndex((m) => m.motoboyId === motoboyId);
+        if (idx >= 0) listaMotoboys[idx].pontos = novosPontos;
+        else listaMotoboys.push({ motoboyId, pontos: novosPontos });
+      } else {
+        listaMotoboys.push({ motoboyId, pontos: novosPontos });
+      }
+
+      listaMotoboys.sort((a, b) => b.pontos - a.pontos);
+      listaMotoboys = listaMotoboys.map((m, i) => ({ ...m, posicao: i + 1 }));
+      await rankingRef.set({ semanaId, listaMotoboys });
+    }
+  }
+
+  return { message: `Parada ${paradaIndex + 1} finalizada com sucesso!` };
+}
+
+// ===============================
+// 🔹 WRAPPER onCall (app Android / client)
+// ===============================
+exports.finalizarEntrega = functions.https.onCall(async (request) => {
+  const data = request.data; // ✅ acessa request.data
+  console.log("📥 Dados recebidos no onCall:", JSON.stringify(data, null, 2));
+  console.log("🆔 UID do usuário:", request.auth?.uid);
+
+  const { entregaId, motoboyId, paradaIndex } = data || {};
+
+  if (!entregaId || !motoboyId || paradaIndex === undefined || paradaIndex === null) {
+    console.error("❌ Parâmetros inválidos detectados:", { entregaId, motoboyId, paradaIndex });
     throw new functions.https.HttpsError(
       "invalid-argument",
       "Parâmetros inválidos: entregaId, motoboyId e paradaIndex são obrigatórios."
@@ -41,100 +130,39 @@ exports.finalizarEntrega = functions.https.onCall(async (data, context) => {
   }
 
   try {
-    // 2️⃣ Buscar entrega
-    const entregaRef = db.collection("entregas").doc(entregaId);
-    const entregaSnap = await entregaRef.get();
-    if (!entregaSnap.exists) {
-      throw new functions.https.HttpsError("not-found", "Entrega não encontrada");
-    }
-    const entrega = entregaSnap.data();
-
-    const totalParadas = entrega.destinos?.length || 0;
-    if (paradaIndex < 0 || paradaIndex >= totalParadas) {
-      throw new functions.https.HttpsError("out-of-range", "Parada inválida");
-    }
-
-    // 3️⃣ Atualizar status da parada
-    const paradasStatus = entrega.paradasStatus || Array(totalParadas).fill("pendente");
-    paradasStatus[paradaIndex] = "concluída";
-
-    // 4️⃣ Verificar se todas finalizadas
-    const todasFinalizadas = paradasStatus.every((status) => status === "concluída");
-
-    // 5️⃣ Calcular valores
-    const totalKm = entrega.kmPercorridos || 0;
-    const taxaParada = totalParadas >= 2 ? 3 : 0;
-    const valorEntregaCliente = totalKm * 1.7 + taxaParada;
-    const valorEntregaMotoboy = totalKm * 1.5 + taxaParada;
-    const lucroPlataforma = valorEntregaCliente - valorEntregaMotoboy;
-
-    // 6️⃣ Atualizar Firestore da entrega
-    const updateData = { paradasStatus };
-    if (todasFinalizadas) {
-      updateData.status = "finalizada";
-      updateData.finalizadoEm = admin.firestore.FieldValue.serverTimestamp();
-      updateData.kmPercorridos = totalKm;
-      updateData.valorEntregaCliente = valorEntregaCliente;
-      updateData.valorEntregaMotoboy = valorEntregaMotoboy;
-      updateData.lucroPlataforma = lucroPlataforma;
-    }
-    await entregaRef.update(updateData);
-
-    // 7️⃣ Atualizar saldo motoboy e ranking
-    if (todasFinalizadas) {
-      const motoboyRef = db.collection("motoboys").doc(motoboyId);
-      const motoboySnap = await motoboyRef.get();
-      if (motoboySnap.exists) {
-        const motoboy = motoboySnap.data();
-        const novoSaldo = (motoboy.saldoDisponivel || 0) + valorEntregaMotoboy;
-        const novasEntregas = (motoboy.entregasConcluidas || 0) + 1;
-        const novosPontos = (motoboy.pontosSemana || 0) + 10;
-
-        await motoboyRef.update({
-          saldoDisponivel: novoSaldo,
-          entregasConcluidas: novasEntregas,
-          pontosSemana: novosPontos,
-        });
-
-        // Ranking semanal
-        const semanaId = getSemanaId();
-        const rankingRef = db.collection("ranking").doc(semanaId);
-        const rankingSnap = await rankingRef.get();
-        let listaMotoboys = [];
-
-        if (rankingSnap.exists) {
-          listaMotoboys = rankingSnap.data().listaMotoboys || [];
-          const idx = listaMotoboys.findIndex((m) => m.motoboyId === motoboyId);
-          if (idx >= 0) listaMotoboys[idx].pontos = novosPontos;
-          else listaMotoboys.push({ motoboyId, pontos: novosPontos });
-        } else {
-          listaMotoboys.push({ motoboyId, pontos: novosPontos });
-        }
-
-        listaMotoboys.sort((a, b) => b.pontos - a.pontos);
-        listaMotoboys = listaMotoboys.map((m, i) => ({ ...m, posicao: i + 1 }));
-        await rankingRef.set({ semanaId, listaMotoboys });
-      }
-    }
-
-    console.log(`✅ Parada ${paradaIndex + 1} finalizada com sucesso!`);
-    return { message: `Parada ${paradaIndex + 1} finalizada com sucesso!` };
+    const result = await finalizarEntregaLogic({ entregaId, motoboyId, paradaIndex });
+    console.log("✅ Resultado da finalização:", result);
+    return result;
   } catch (err) {
-    console.error("❌ Erro na função finalizarEntrega:", err);
-    throw new functions.https.HttpsError("internal", "Erro ao finalizar entrega: " + err.message);
+    console.error("❌ Erro onCall durante finalizarEntregaLogic:", err);
+    throw err;
   }
 });
 
 // ===============================
-// 🔹 FUNÇÃO: ENVIAR EMAIL DE CONTATO (V3)
+// 🔹 WRAPPER onRequest (shell / curl)
+// ===============================
+exports.finalizarEntregaHttp = functions.https.onRequest(async (req, res) => {
+  console.log("📥 Dados recebidos no onRequest:", req.body);
+  try {
+    const result = await finalizarEntregaLogic(req.body);
+    res.json(result);
+  } catch (err) {
+    console.error("❌ Erro onRequest:", err);
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// ===============================
+// 🔹 FUNÇÃO: ENVIAR EMAIL DE CONTATO
 // ===============================
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: "rootedtch@gmail.com",
-    pass: "mofb skds kdun qeha",
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
   },
 });
 
@@ -142,8 +170,8 @@ exports.sendContactEmail = onDocumentCreated("contatos/{docId}", async (event) =
   const data = event.data;
 
   const mailOptions = {
-    from: "rootedtch@gmail.com",
-    to: "rootedtch@gmail.com",
+    from: process.env.EMAIL_USER,
+    to: process.env.EMAIL_USER,
     subject: `Nova mensagem de ${data.nome}`,
     html: `
       <p><strong>Nome:</strong> ${data.nome}</p>
