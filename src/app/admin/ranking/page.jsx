@@ -21,12 +21,19 @@ export default function RankingAdmin() {
 
   // Função para calcular a semana atual
   function getSemanaId() {
-    const now = new Date()
-    const oneJan = new Date(now.getFullYear(), 0, 1)
-    const numberOfDays = Math.floor((now - oneJan) / (24 * 60 * 60 * 1000))
-    const week = Math.ceil((numberOfDays + oneJan.getDay() + 1) / 7)
-    return `${now.getFullYear()}-W${week}`
-  }
+  const now = new Date();
+  // Converte para UTC para evitar problemas de fuso
+  const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  // ISO 8601: ajusta para quinta-feira da semana (semana contém quinta = semana do ano)
+  const dayNum = d.getUTCDay() || 7; // Domingo = 7
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const year = d.getUTCFullYear();
+  // Calcula semana
+  const startOfYear = new Date(Date.UTC(year, 0, 1));
+  const days = Math.floor((d - startOfYear) / 86400000);
+  const week = Math.ceil((days + 1) / 7);
+  return `${year}-W${week}`;
+}
 
   // Busca dados de motoboys e ranking
   const fetchData = async () => {

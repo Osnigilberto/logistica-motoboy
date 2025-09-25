@@ -14,12 +14,15 @@ const FieldValue = require('firebase-admin').firestore.FieldValue;
 // 🔹 FUNÇÃO AUXILIAR: CALCULAR ID DA SEMANA
 // ===============================
 function getSemanaId() {
-  const agora = new Date();
-  const primeiroDiaDoAno = new Date(agora.getFullYear(), 0, 1);
-  const diff = agora - primeiroDiaDoAno;
-  const umDia = 1000 * 60 * 60 * 24;
-  const numeroSemana = Math.ceil((diff / umDia + primeiroDiaDoAno.getDay() + 1) / 7);
-  return `${agora.getFullYear()}-S${numeroSemana}`;
+  const now = new Date();
+  const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const year = d.getUTCFullYear();
+  const startOfYear = new Date(Date.UTC(year, 0, 1));
+  const days = Math.floor((d - startOfYear) / 86400000);
+  const week = Math.ceil((days + 1) / 7);
+  return `${year}-W${week}`;
 }
 
 // ===============================
