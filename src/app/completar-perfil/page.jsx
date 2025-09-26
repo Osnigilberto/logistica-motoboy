@@ -1,163 +1,305 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthProvider';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '@/firebase/firebaseClient';
-import { useAuth } from '@/context/AuthProvider';
 import styles from './completarPerfil.module.css';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 export default function CompletarPerfil() {
   const { user, profile, loading, fetchProfile } = useAuth();
   const router = useRouter();
 
-  // Estados do formulário
-  const [tipoUsuario, setTipoUsuario] = useState('');
-  const [nome, setNome] = useState('');
-  const [telefone, setTelefone] = useState('');
-  const [placaMoto, setPlacaMoto] = useState('');
+  // Estado do formulário com todos os campos
+  const [dados, setDados] = useState({
+    nome: '',
+    nomeEmpresa: '',
+    tipo: 'cliente',
+    documento: '',
+    telefone: '',
+    rua: '',
+    numero: '',
+    cidade: '',
+    estado: '',
+    pais: '',
+    responsavel: '',
+    contatoResponsavel: '',
+  });
 
-  const [salvando, setSalvando] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  // ✅ Redireciona se perfil já estiver completo
+  // Redireciona para dashboard se o perfil já estiver completo
   useEffect(() => {
     if (!loading && profile?.statusPerfil === 'completo') {
       router.push('/dashboard');
     }
   }, [loading, profile, router]);
 
-  // 🔄 Preenche os campos se já tiver dados parciais
+  // Preenche dados caso existam parcialmente
   useEffect(() => {
     if (profile) {
-      setTipoUsuario(profile.tipoUsuario || '');
-      setNome(profile.nome || '');
-      setTelefone(profile.telefone || '');
-      setPlacaMoto(profile.placaMoto || '');
+      setDados({
+        nome: profile.nome || '',
+        nomeEmpresa: profile.nomeEmpresa || '',
+        tipo: profile.tipo || 'cliente',
+        documento: profile.documento || '',
+        telefone: profile.telefone || '',
+        rua: profile.endereco?.rua || '',
+        numero: profile.endereco?.numero || '',
+        cidade: profile.endereco?.cidade || '',
+        estado: profile.endereco?.estado || '',
+        pais: profile.endereco?.pais || '',
+        responsavel: profile.responsavel || '',
+        contatoResponsavel: profile.contatoResponsavel || '',
+      });
     }
   }, [profile]);
 
+  // ---------------------------
+  // Máscaras
+  // ---------------------------
+  const aplicarMascaraDocumento = (value) => {
+    const v = value.replace(/\D/g, '');
+    return dados.tipo === 'cliente'
+      ? v.replace(/^(\d{2})(\d)/, '$1.$2')
+         .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+         .replace(/\.(\d{3})(\d)/, '.$1/$2')
+         .replace(/(\d{4})(\d)/, '$1-$2')
+         .slice(0, 18)
+      : v.replace(/(\d{3})(\d)/, '$1.$2')
+         .replace(/(\d{3})(\d)/, '$1.$2')
+         .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+         .slice(0, 14);
+  };
+
+  const aplicarMascaraTelefone = (value) => {
+    const v = value.replace(/\D/g, '');
+    return v.length > 10
+      ? v.replace(/^(\d{2})(\d{5})(\d{4}).*/, '($1) $2-$3')
+      : v.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
+  };
+
+  // ---------------------------
+  // Handle change
+  // ---------------------------
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    if (name === 'documento') {
+      setDados((prev) => ({ ...prev, documento: aplicarMascaraDocumento(value) }));
+    } else if (name === 'telefone' || name === 'contatoResponsavel') {
+      setDados((prev) => ({ ...prev, [name]: aplicarMascaraTelefone(value) }));
+    } else {
+      setDados((prev) => ({ ...prev, [name]: value }));
+    }
+  };
+
+  // ---------------------------
+  // Validação CPF/CNPJ
+  // ---------------------------
+  const validarDocumento = (valor) => {
+    const apenasDigitos = valor.replace(/\D/g, '');
+    return dados.tipo === 'cliente' ? apenasDigitos.length === 14 : apenasDigitos.length === 11;
+  };
+
+  // ---------------------------
+  // Submit do formulário
+  // ---------------------------
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!user) return;
 
-    try {
-      setSalvando(true);
+    // Validações
+    if (dados.tipo === 'cliente' && !dados.nomeEmpresa.trim()) {
+      toast.error('Nome da empresa é obrigatório.');
+      return;
+    }
+    if (dados.tipo === 'motoboy' && !dados.nome.trim()) {
+      toast.error('Nome é obrigatório.');
+      return;
+    }
+    if (!validarDocumento(dados.documento)) {
+      toast.error(dados.tipo === 'cliente' ? 'CNPJ inválido.' : 'CPF inválido.');
+      return;
+    }
 
-      // 🔐 Salva ou atualiza dados no Firestore
-      const docRef = doc(db, 'users', user.uid);
+    setSaving(true);
+
+    try {
+      // Salva os dados no Firestore
       await setDoc(
-        docRef,
+        doc(db, 'users', user.uid),
         {
           email: user.email,
-          tipoUsuario,
-          nome,
-          telefone,
-          placaMoto: tipoUsuario === 'motoboy' ? placaMoto : '',
+          tipo: dados.tipo,
+          nome: dados.tipo === 'motoboy' ? dados.nome : '',
+          nomeEmpresa: dados.tipo === 'cliente' ? dados.nomeEmpresa : '',
+          documento: dados.documento,
+          telefone: dados.telefone,
+          endereco: {
+            rua: dados.rua,
+            numero: dados.numero,
+            cidade: dados.cidade,
+            estado: dados.estado,
+            pais: dados.pais,
+          },
+          responsavel: dados.responsavel,
+          contatoResponsavel: dados.contatoResponsavel,
           statusPerfil: 'completo',
         },
         { merge: true }
       );
 
-      // 🔄 Atualiza o contexto com os dados novos
+      // Atualiza o contexto
       await fetchProfile(user.uid);
 
-      // 👉 Vai para o dashboard
+      toast.success('Perfil criado com sucesso!');
       router.push('/dashboard');
-    } catch (error) {
-      console.error('❌ Erro ao salvar perfil:', error);
-      alert('Erro ao salvar perfil, tente novamente.');
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao salvar perfil.');
     } finally {
-      setSalvando(false);
+      setSaving(false);
     }
   };
 
   if (loading) {
-    // Tela de carregamento inicial (auth state ainda verificando)
     return (
-      <div className={styles.spinnerWrapper}>
+      <main className={styles.spinnerWrapper}>
         <div className={styles.spinner}></div>
         <p>Carregando...</p>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className={styles.formContainer}>
-      <h1 className={styles.title}>Completar Perfil</h1>
+    <>
+      <form onSubmit={handleSubmit} className={styles.formContainer}>
+        <h2 className={styles.title}>Completar Perfil</h2>
 
-      <form onSubmit={handleSubmit}>
-        {/* Grupo de radio: tipo de usuário */}
+        {/* Tipo de usuário */}
         <div className={styles.radioGroup}>
           <label>
             <input
               type="radio"
-              value="motoboy"
-              checked={tipoUsuario === 'motoboy'}
-              onChange={(e) => setTipoUsuario(e.target.value)}
+              name="tipo"
+              value="cliente"
+              checked={dados.tipo === 'cliente'}
+              onChange={handleChange}
+              disabled={saving}
             />
-            Motoboy
+            Cliente
           </label>
           <label>
             <input
               type="radio"
-              value="empresa"
-              checked={tipoUsuario === 'empresa'}
-              onChange={(e) => setTipoUsuario(e.target.value)}
+              name="tipo"
+              value="motoboy"
+              checked={dados.tipo === 'motoboy'}
+              onChange={handleChange}
+              disabled={saving}
             />
-            Empresa
+            Motoboy
           </label>
         </div>
 
-        {/* Nome */}
+        {/* Nome / Nome da empresa */}
+        {dados.tipo === 'cliente' ? (
+          <input
+            name="nomeEmpresa"
+            placeholder="Nome da empresa"
+            value={dados.nomeEmpresa}
+            onChange={handleChange}
+            className={styles.input}
+            required
+            disabled={saving}
+          />
+        ) : (
+          <input
+            name="nome"
+            placeholder="Seu nome completo"
+            value={dados.nome}
+            onChange={handleChange}
+            className={styles.input}
+            required
+            disabled={saving}
+          />
+        )}
+
+        {/* Documento */}
         <input
-          type="text"
-          placeholder="Nome"
-          value={nome}
-          onChange={(e) => setNome(e.target.value)}
+          name="documento"
+          placeholder={dados.tipo === 'cliente' ? 'CNPJ' : 'CPF'}
+          value={dados.documento}
+          onChange={handleChange}
           className={styles.input}
           required
+          maxLength={18}
+          disabled={saving}
         />
 
         {/* Telefone */}
         <input
-          type="tel"
+          name="telefone"
           placeholder="Telefone"
-          value={telefone}
-          onChange={(e) => setTelefone(e.target.value)}
+          value={dados.telefone}
+          onChange={handleChange}
           className={styles.input}
-          required
+          maxLength={15}
+          disabled={saving}
         />
 
-        {/* Placa da moto (só aparece se for motoboy) */}
-        {tipoUsuario === 'motoboy' && (
-          <input
-            type="text"
-            placeholder="Placa da moto"
-            value={placaMoto}
-            onChange={(e) => setPlacaMoto(e.target.value)}
-            className={styles.input}
-            required
-          />
-        )}
+        {/* Endereço */}
+        <fieldset className={styles.fieldset}>
+          <legend className={styles.legend}>Endereço</legend>
+          {['rua', 'numero', 'cidade', 'estado', 'pais'].map((field) => (
+            <input
+              key={field}
+              name={field}
+              placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
+              value={dados[field]}
+              onChange={handleChange}
+              className={styles.input}
+              disabled={saving}
+            />
+          ))}
+        </fieldset>
 
-        {/* Botão de salvar */}
+        {/* Responsável */}
+        <input
+          name="responsavel"
+          placeholder="Responsável"
+          value={dados.responsavel}
+          onChange={handleChange}
+          className={styles.input}
+          disabled={saving}
+        />
+        <input
+          name="contatoResponsavel"
+          placeholder="Contato do responsável"
+          value={dados.contatoResponsavel}
+          onChange={handleChange}
+          className={styles.input}
+          disabled={saving}
+        />
+
+        {/* Botões */}
+        <button type="submit" className={styles.button} disabled={saving}>
+          {saving ? 'Salvando...' : 'Salvar Perfil'}
+        </button>
+
         <button
-          type="submit"
-          className={styles.button}
-          disabled={salvando}
+          type="button"
+          className={styles.voltar}
+          onClick={() => router.push('/')}
         >
-          {salvando ? 'Salvando...' : 'Salvar Perfil'}
+          ← Voltar
         </button>
       </form>
 
-      {/* Botão voltar */}
-      <button
-        type="button"
-        className={styles.voltar}
-        onClick={() => router.push('/')}
-      >
-        Voltar
-      </button>
-    </div>
+      <ToastContainer position="top-right" autoClose={3000} />
+    </>
   );
 }
