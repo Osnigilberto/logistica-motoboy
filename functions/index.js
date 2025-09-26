@@ -8,7 +8,7 @@ require('dotenv').config(); // Carrega variáveis do arquivo .env
 
 admin.initializeApp();
 const db = admin.firestore();
-const FieldValue = require('firebase-admin').firestore.FieldValue;
+const FieldValue = admin.firestore.FieldValue; // ✅ forma correta
 
 // ===============================
 // 🔹 FUNÇÃO AUXILIAR: CALCULAR ID DA SEMANA
@@ -68,7 +68,7 @@ async function finalizarEntregaLogic({ entregaId, motoboyId, paradaIndex }) {
   const updateData = { paradasStatus };
   if (todasFinalizadas) {
     updateData.status = "finalizada";
-    updateData.finalizadoEm = admin.firestore.FieldValue.serverTimestamp();
+    updateData.finalizadoEm = FieldValue.serverTimestamp();
     updateData.kmPercorridos = totalKm;
     updateData.valorEntregaCliente = valorEntregaCliente;
     updateData.valorEntregaMotoboy = valorEntregaMotoboy;
@@ -118,7 +118,7 @@ async function finalizarEntregaLogic({ entregaId, motoboyId, paradaIndex }) {
 // 🔹 WRAPPER onCall (app Android / client)
 // ===============================
 exports.finalizarEntrega = functions.https.onCall(async (request) => {
-  const data = request.data; // ✅ acessa request.data
+  const data = request.data;
   console.log("📥 Dados recebidos no onCall:", JSON.stringify(data, null, 2));
   console.log("🆔 UID do usuário:", request.auth?.uid);
 
@@ -189,4 +189,67 @@ exports.sendContactEmail = onDocumentCreated("contatos/{docId}", async (event) =
   } catch (err) {
     console.error("❌ Erro ao enviar email:", err);
   }
+});
+
+// ===============================
+// 🔹 FUNÇÃO: SOLICITAR SAQUE (MANUAL) — COM SAQUE MÍNIMO DE R$100
+// ===============================
+exports.solicitarSaque = functions.https.onCall(async (data, context) => {
+  // 🔐 Garantir que o usuário está autenticado
+  if (!context.auth || !context.auth.uid) {
+    throw new functions.https.HttpsError("unauthenticated", "Apenas motoboys autenticados podem solicitar saque.");
+  }
+
+  const motoboyId = context.auth.uid;
+  const { valor } = data;
+
+  // ✅ Validações
+  if (typeof valor !== "number" || valor <= 0 || valor > 10000) {
+    throw new functions.https.HttpsError("invalid-argument", "Valor inválido. Deve ser um número positivo (máx. R$10.000).");
+  }
+
+  // 🔻 NOVO: Saque mínimo de R$ 100,00
+  if (valor < 100) {
+    throw new functions.https.HttpsError("failed-precondition", "O saque mínimo é de R$ 100,00.");
+  }
+
+  // 🔍 Buscar motoboy
+  const motoboyRef = db.collection("motoboys").doc(motoboyId);
+  const motoboySnap = await motoboyRef.get();
+
+  if (!motoboySnap.exists) {
+    throw new functions.https.HttpsError("not-found", "Motoboy não encontrado.");
+  }
+
+  const motoboy = motoboySnap.data();
+
+  // 💰 Verificar saldo
+  const saldoDisponivel = motoboy.saldoDisponivel || 0;
+  if (saldoDisponivel < valor) {
+    throw new functions.https.HttpsError("failed-precondition", `Saldo insuficiente. Seu saldo: R$${saldoDisponivel.toFixed(2)}`);
+  }
+
+  // 📝 Registrar solicitação de saque
+  const saqueDoc = await db.collection("saques").add({
+    motoboyId,
+    valor,
+    status: "pendente",
+    criadoEm: FieldValue.serverTimestamp(),
+    nomeMotoboy: motoboy.nome || "Motoboy",
+    chavePix: motoboy.chavePix, // ← você precisa ter esse campo no cadastro!
+    pagoEm: null,
+  });
+
+  // 🔒 Bloquear o valor no saldo (evita saques duplicados)
+  await motoboyRef.update({
+    saldoDisponivel: FieldValue.increment(-valor),
+    saldoEmSaque: FieldValue.increment(valor),
+  });
+
+  console.log(`✅ Saque solicitado: R$${valor} para ${motoboyId}`);
+  return {
+    message: "Saque solicitado com sucesso! Será processado toda terça-feira.",
+    saqueId: saqueDoc.id,
+    valor,
+  };
 });

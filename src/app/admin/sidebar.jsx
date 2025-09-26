@@ -19,6 +19,7 @@ export default function Sidebar() {
     { href: '/admin/usuarios', label: 'Usuários' },
     { href: '/admin/vinculos', label: 'Vínculos' },
     { href: '/admin/entregas', label: 'Entregas' },
+    { href: '/admin/saques', label: 'Saques' },
     { href: '/admin/ranking', label: 'Ranking' },
     { href: '/admin/configuracoes', label: 'Configurações' },
   ]
