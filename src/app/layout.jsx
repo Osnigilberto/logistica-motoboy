@@ -30,6 +30,7 @@ export default function RootLayout({ children }) {
         <AuthProvider>
           <GoogleMapsLoader />
           {children}
+          <Analytics />
           </AuthProvider>
         <ToastContainer position="top-right" autoClose={3000} />
       </body>

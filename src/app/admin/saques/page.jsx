@@ -9,10 +9,17 @@ import { app } from '@/firebase/firebaseClient'
 import Sidebar from '../sidebar'
 import styles from '../admin.module.css'
 
+/**
+ * Página de gerenciamento de saques no painel administrativo.
+ * - Lista saques pendentes e pagos
+ * - Permite marcar saques como "pago"
+ * - Exibe nome do motoboy com base na coleção 'users'
+ */
 export default function SaquesPage() {
   const router = useRouter()
   const auth = getAuth(app)
   const db = getFirestore(app)
+  // UID do administrador (definido manualmente por segurança)
   const ADMIN_UID = 'TkIu3cI2itQ2K4xAkHQ9l9KTvp83'
 
   const [user, setUser] = useState(null)
@@ -20,6 +27,7 @@ export default function SaquesPage() {
   const [saques, setSaques] = useState([])
   const [usuarios, setUsuarios] = useState([])
 
+  // Observa o estado de autenticação do usuário
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser)
@@ -28,33 +36,42 @@ export default function SaquesPage() {
     return () => unsubscribe()
   }, [auth])
 
+  // Carrega dados apenas se o usuário for o admin
   useEffect(() => {
+    // Redireciona para login se não for admin
     if (!user || user.uid !== ADMIN_UID) {
-      router.push('/admin/login')
+      if (!loading) {
+        router.push('/admin/login')
+      }
       return
     }
 
     const fetchData = async () => {
-    try {
-        // 🔹 Buscar motoboys da coleção 'users' (onde estão todos os usuários)
-        const usersSnap = await getDocs(collection(db, 'users'));
+      try {
+        // 🔹 Busca todos os usuários e filtra apenas os motoboys
+        const usersSnap = await getDocs(collection(db, 'users'))
         const usersList = usersSnap.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(user => user.tipo === 'motoboy'); // só motoboys
-        setUsuarios(usersList);
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .filter(user => user.tipo === 'motoboy') // só motoboys
+        setUsuarios(usersList)
 
-        // 🔹 Buscar saques
-        const saquesSnap = await getDocs(collection(db, 'saques'));
-        const saquesList = saquesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setSaques(saquesList);
-    } catch (err) {
-        console.error('Erro ao buscar dados de saques ou motoboys:', err);
+        // 🔹 Busca todos os saques (pendentes e pagos)
+        const saquesSnap = await getDocs(collection(db, 'saques'))
+        const saquesList = saquesSnap.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+        setSaques(saquesList)
+      } catch (err) {
+        console.error('Erro ao buscar dados de saques ou motoboys:', err)
+        // Mesmo com erro, não redireciona — mantém a página visível
+      }
     }
-    }
-    
+
     fetchData()
-  }, [user, db, router])
+  }, [user, db, router, loading])
 
+  // Marca um saque como "pago" no Firestore
   const handleMarcarPago = async (saqueId) => {
     if (!confirm('Tem certeza que deseja marcar este saque como pago?')) return
 
@@ -63,22 +80,35 @@ export default function SaquesPage() {
         status: 'pago',
         pagoEm: new Date()
       })
-      // Atualizar lista
-      setSaques(saques.map(s => s.id === saqueId ? { ...s, status: 'pago', pagoEm: new Date() } : s))
+      // Atualiza localmente para feedback imediato
+      setSaques(saques.map(s => 
+        s.id === saqueId 
+          ? { ...s, status: 'pago', pagoEm: new Date() } 
+          : s
+      ))
     } catch (err) {
-      alert('Erro ao atualizar saque')
-      console.error(err)
+      alert('Erro ao atualizar saque. Verifique as regras do Firestore.')
+      console.error('Erro ao marcar saque como pago:', err)
     }
   }
 
+  // Retorna o nome do motoboy pelo ID
   const getMotoboyNome = (motoboyId) => {
     const motoboy = usuarios.find(u => u.id === motoboyId)
     return motoboy?.nome || motoboyId
   }
 
-  if (loading) return <p className={styles.loading}>Carregando...</p>
-  if (!user || user.uid !== ADMIN_UID) return null
+  // Estado de carregamento
+  if (loading) {
+    return <p className={styles.loading}>Carregando...</p>
+  }
 
+  // Proteção adicional (não deveria ser necessário se o useEffect já redireciona)
+  if (!user || user.uid !== ADMIN_UID) {
+    return null
+  }
+
+  // Separa saques por status
   const saquesPendentes = saques.filter(s => s.status === 'pendente')
   const saquesPagos = saques.filter(s => s.status === 'pago')
 
@@ -88,6 +118,7 @@ export default function SaquesPage() {
       <main className={styles.content}>
         <h1 className={styles.title}>Gerenciar Saques</h1>
 
+        {/* Seção: Saques Pendentes */}
         <h2>Saques Pendentes ({saquesPendentes.length})</h2>
         {saquesPendentes.length === 0 ? (
           <p>Nenhum saque pendente.</p>
@@ -108,7 +139,12 @@ export default function SaquesPage() {
                   <td>{getMotoboyNome(saque.motoboyId)}</td>
                   <td>R$ {saque.valor?.toFixed(2)}</td>
                   <td>{saque.chavePix || '—'}</td>
-                  <td>{saque.criadoEm?.toDate?.().toLocaleString() || '—'}</td>
+                  <td>
+                    {saque.criadoEm?.toDate 
+                      ? saque.criadoEm.toDate().toLocaleString('pt-BR')
+                      : '—'
+                    }
+                  </td>
                   <td>
                     <button
                       className={styles.buttonPrimary}
@@ -123,6 +159,7 @@ export default function SaquesPage() {
           </table>
         )}
 
+        {/* Seção: Histórico de Saques Pagos */}
         <h2 style={{ marginTop: '2rem' }}>Histórico de Saques Pagos ({saquesPagos.length})</h2>
         {saquesPagos.length === 0 ? (
           <p>Nenhum saque pago ainda.</p>
@@ -140,7 +177,12 @@ export default function SaquesPage() {
                 <tr key={saque.id}>
                   <td>{getMotoboyNome(saque.motoboyId)}</td>
                   <td>R$ {saque.valor?.toFixed(2)}</td>
-                  <td>{saque.pagoEm?.toDate?.().toLocaleString() || '—'}</td>
+                  <td>
+                    {saque.pagoEm?.toDate 
+                      ? saque.pagoEm.toDate().toLocaleString('pt-BR')
+                      : '—'
+                    }
+                  </td>
                 </tr>
               ))}
             </tbody>
