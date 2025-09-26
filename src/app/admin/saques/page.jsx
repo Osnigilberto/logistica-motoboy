@@ -37,7 +37,7 @@ export default function SaquesPage() {
     const fetchData = async () => {
       try {
         // Buscar motoboys para exibir nome
-        const usersSnap = await getDocs(collection(db, 'motoboys')) // ou 'users' se motoboys estiverem lá
+        const usersSnap = await getDocs(collection(db, 'users')) 
         const usersList = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }))
         setUsuarios(usersList)
 
