@@ -24,6 +24,11 @@ const app = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0]
 
 // Inicializa os serviços que vamos usar
 const auth = getAuth(app)       // Serviço de autenticação Firebase
+
+if (typeof window !== 'undefined') {
+  auth.setPersistence(browserSessionPersistence)
+    .catch(console.error)
+}
 const db = getFirestore(app)    // Banco de dados Firestore
 const storage = getStorage(app) // Serviço de Storage para arquivos (upload, download, etc)
 
