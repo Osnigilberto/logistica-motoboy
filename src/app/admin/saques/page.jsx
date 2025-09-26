@@ -35,21 +35,23 @@ export default function SaquesPage() {
     }
 
     const fetchData = async () => {
-      try {
-        // Buscar motoboys para exibir nome
-        const usersSnap = await getDocs(collection(db, 'users')) 
-        const usersList = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }))
-        setUsuarios(usersList)
+    try {
+        // 🔹 Buscar motoboys da coleção 'users' (onde estão todos os usuários)
+        const usersSnap = await getDocs(collection(db, 'users'));
+        const usersList = usersSnap.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(user => user.tipo === 'motoboy'); // só motoboys
+        setUsuarios(usersList);
 
-        // Buscar saques
-        const saquesSnap = await getDocs(collection(db, 'saques'))
-        const saquesList = saquesSnap.docs.map(d => ({ id: d.id, ...d.data() }))
-        setSaques(saquesList)
-      } catch (err) {
-        console.error('Erro ao buscar saques:', err)
-      }
+        // 🔹 Buscar saques
+        const saquesSnap = await getDocs(collection(db, 'saques'));
+        const saquesList = saquesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setSaques(saquesList);
+    } catch (err) {
+        console.error('Erro ao buscar dados de saques ou motoboys:', err);
     }
-
+    }
+    
     fetchData()
   }, [user, db, router])
 
