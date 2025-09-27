@@ -4,14 +4,14 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const nodemailer = require("nodemailer");
-require('dotenv').config(); // Carrega variáveis do arquivo .env
+require("dotenv").config(); // Carrega variáveis do arquivo .env
 
 admin.initializeApp();
 const db = admin.firestore();
 const FieldValue = admin.firestore.FieldValue; // ✅ forma correta
 
 // ===============================
-// 🔹 FUNÇÃO AUXILIAR: CALCULAR ID DA SEMANA
+// 🔹 FUNÇÃO AUXILIAR: CALCULAR ID DA SEMANA (para ranking)
 // ===============================
 function getSemanaId() {
   const now = new Date();
@@ -31,6 +31,7 @@ function getSemanaId() {
 async function finalizarEntregaLogic({ entregaId, motoboyId, paradaIndex }) {
   console.log("📦 Finalizando entrega:", { entregaId, motoboyId, paradaIndex });
 
+  // 🔎 Validações iniciais
   if (
     typeof entregaId !== "string" || !entregaId.trim() ||
     typeof motoboyId !== "string" || !motoboyId.trim() ||
@@ -54,17 +55,19 @@ async function finalizarEntregaLogic({ entregaId, motoboyId, paradaIndex }) {
     throw new functions.https.HttpsError("out-of-range", "Parada inválida");
   }
 
+  // Atualiza parada
   const paradasStatus = entrega.paradasStatus || Array(totalParadas).fill("pendente");
   paradasStatus[paradaIndex] = "concluída";
-
   const todasFinalizadas = paradasStatus.every((status) => status === "concluída");
 
+  // Calcula valores
   const totalKm = entrega.kmPercorridos || 0;
   const taxaParada = totalParadas > 1 ? (totalParadas - 1) * 3 : 0;
   const valorEntregaCliente = totalKm <= 5 ? 9 : totalKm * 1.7 + taxaParada;
   const valorEntregaMotoboy = totalKm <= 5 ? 8 : totalKm * 1.5 + taxaParada;
   const lucroPlataforma = valorEntregaCliente - valorEntregaMotoboy;
 
+  // Atualiza entrega
   const updateData = { paradasStatus };
   if (todasFinalizadas) {
     updateData.status = "finalizada";
@@ -76,6 +79,7 @@ async function finalizarEntregaLogic({ entregaId, motoboyId, paradaIndex }) {
   }
   await entregaRef.update(updateData);
 
+  // Atualiza saldo, ranking e pontos do motoboy
   if (todasFinalizadas) {
     const motoboyRef = db.collection("motoboys").doc(motoboyId);
     const motoboySnap = await motoboyRef.get();
@@ -123,9 +127,7 @@ exports.finalizarEntrega = functions.https.onCall(async (request) => {
   console.log("🆔 UID do usuário:", request.auth?.uid);
 
   const { entregaId, motoboyId, paradaIndex } = data || {};
-
   if (!entregaId || !motoboyId || paradaIndex === undefined || paradaIndex === null) {
-    console.error("❌ Parâmetros inválidos detectados:", { entregaId, motoboyId, paradaIndex });
     throw new functions.https.HttpsError(
       "invalid-argument",
       "Parâmetros inválidos: entregaId, motoboyId e paradaIndex são obrigatórios."
@@ -134,10 +136,9 @@ exports.finalizarEntrega = functions.https.onCall(async (request) => {
 
   try {
     const result = await finalizarEntregaLogic({ entregaId, motoboyId, paradaIndex });
-    console.log("✅ Resultado da finalização:", result);
     return result;
   } catch (err) {
-    console.error("❌ Erro onCall durante finalizarEntregaLogic:", err);
+    console.error("❌ Erro onCall:", err);
     throw err;
   }
 });
@@ -146,12 +147,10 @@ exports.finalizarEntrega = functions.https.onCall(async (request) => {
 // 🔹 WRAPPER onRequest (shell / curl)
 // ===============================
 exports.finalizarEntregaHttp = functions.https.onRequest(async (req, res) => {
-  console.log("📥 Dados recebidos no onRequest:", req.body);
   try {
     const result = await finalizarEntregaLogic(req.body);
     res.json(result);
   } catch (err) {
-    console.error("❌ Erro onRequest:", err);
     res.status(400).json({ error: err.message });
   }
 });
@@ -163,15 +162,11 @@ const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
+  auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
 });
 
 exports.sendContactEmail = onDocumentCreated("contatos/{docId}", async (event) => {
   const data = event.data;
-
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: process.env.EMAIL_USER,
@@ -195,7 +190,6 @@ exports.sendContactEmail = onDocumentCreated("contatos/{docId}", async (event) =
 // 🔹 FUNÇÃO: SOLICITAR SAQUE (MANUAL) — COM SAQUE MÍNIMO DE R$100
 // ===============================
 exports.solicitarSaque = functions.https.onCall(async (data, context) => {
-  // 🔐 Garantir que o usuário está autenticado
   if (!context.auth || !context.auth.uid) {
     throw new functions.https.HttpsError("unauthenticated", "Apenas motoboys autenticados podem solicitar saque.");
   }
@@ -203,53 +197,40 @@ exports.solicitarSaque = functions.https.onCall(async (data, context) => {
   const motoboyId = context.auth.uid;
   const { valor } = data;
 
-  // ✅ Validações
   if (typeof valor !== "number" || valor <= 0 || valor > 10000) {
-    throw new functions.https.HttpsError("invalid-argument", "Valor inválido. Deve ser um número positivo (máx. R$10.000).");
+    throw new functions.https.HttpsError("invalid-argument", "Valor inválido. Máx: R$10.000.");
   }
-
-  // 🔻 NOVO: Saque mínimo de R$ 100,00
   if (valor < 100) {
-    throw new functions.https.HttpsError("failed-precondition", "O saque mínimo é de R$ 100,00.");
+    throw new functions.https.HttpsError("failed-precondition", "O saque mínimo é de R$100.");
   }
 
-  // 🔍 Buscar motoboy
   const motoboyRef = db.collection("motoboys").doc(motoboyId);
   const motoboySnap = await motoboyRef.get();
-
   if (!motoboySnap.exists) {
     throw new functions.https.HttpsError("not-found", "Motoboy não encontrado.");
   }
 
   const motoboy = motoboySnap.data();
-
-  // 💰 Verificar saldo
   const saldoDisponivel = motoboy.saldoDisponivel || 0;
   if (saldoDisponivel < valor) {
     throw new functions.https.HttpsError("failed-precondition", `Saldo insuficiente. Seu saldo: R$${saldoDisponivel.toFixed(2)}`);
   }
 
-  // 📝 Registrar solicitação de saque
   const saqueDoc = await db.collection("saques").add({
     motoboyId,
     valor,
     status: "pendente",
     criadoEm: FieldValue.serverTimestamp(),
     nomeMotoboy: motoboy.nome || "Motoboy",
-    chavePix: motoboy.chavePix, // ← você precisa ter esse campo no cadastro!
+    chavePix: motoboy.chavePix,
     pagoEm: null,
   });
 
-  // 🔒 Bloquear o valor no saldo (evita saques duplicados)
   await motoboyRef.update({
     saldoDisponivel: FieldValue.increment(-valor),
     saldoEmSaque: FieldValue.increment(valor),
   });
 
   console.log(`✅ Saque solicitado: R$${valor} para ${motoboyId}`);
-  return {
-    message: "Saque solicitado com sucesso! Será processado toda terça-feira.",
-    saqueId: saqueDoc.id,
-    valor,
-  };
+  return { message: "Saque solicitado com sucesso! Será processado toda terça-feira.", saqueId: saqueDoc.id, valor };
 });
