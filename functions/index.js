@@ -4,14 +4,15 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const nodemailer = require("nodemailer");
+const { onSchedule } = require('firebase-functions/v2/scheduler');
 require("dotenv").config(); // Carrega variáveis do arquivo .env
 
 admin.initializeApp();
 const db = admin.firestore();
-const FieldValue = admin.firestore.FieldValue; // ✅ forma correta
+const FieldValue = admin.firestore.FieldValue;
 
 // ===============================
-// 🔹 FUNÇÃO AUXILIAR: CALCULAR ID DA SEMANA (para ranking)
+// 🔹 FUNÇÃO AUXILIAR: CALCULAR ID DA SEMANA (ISO 8601)
 // ===============================
 function getSemanaId() {
   const now = new Date();
@@ -26,12 +27,38 @@ function getSemanaId() {
 }
 
 // ===============================
+// 🔹 LÓGICA DE CONCESSÃO DE MEDALHAS AUTOMÁTICAS
+// ===============================
+const concederMedalhasAutomatica = async (motoboyRef, entregasConcluidas) => {
+  const novasMedalhas = [];
+
+  const medalhasDisponiveis = [
+    { nome: "Primeira Entrega", entregasNecessarias: 1 },
+    { nome: "5 Entregas Concluídas", entregasNecessarias: 5 },
+    { nome: "10 Entregas Concluídas", entregasNecessarias: 10 },
+    { nome: "20 Entregas Concluídas", entregasNecessarias: 20 },
+    { nome: "50 Entregas Concluídas", entregasNecessarias: 50 },
+  ];
+
+  for (const m of medalhasDisponiveis) {
+    if (entregasConcluidas >= m.entregasNecessarias) {
+      novasMedalhas.push(m.nome);
+    }
+  }
+
+  if (novasMedalhas.length > 0) {
+    await motoboyRef.update({
+      medalhas: FieldValue.arrayUnion(...novasMedalhas)
+    });
+  }
+};
+
+// ===============================
 // 🔹 FUNÇÃO: LÓGICA FINALIZAR ENTREGA
 // ===============================
 async function finalizarEntregaLogic({ entregaId, motoboyId, paradaIndex }) {
   console.log("📦 Finalizando entrega:", { entregaId, motoboyId, paradaIndex });
 
-  // 🔎 Validações iniciais
   if (
     typeof entregaId !== "string" || !entregaId.trim() ||
     typeof motoboyId !== "string" || !motoboyId.trim() ||
@@ -68,64 +95,109 @@ async function finalizarEntregaLogic({ entregaId, motoboyId, paradaIndex }) {
   const lucroPlataforma = valorEntregaCliente - valorEntregaMotoboy;
 
   // Atualiza entrega
-  const updateData = { paradasStatus };
-  if (todasFinalizadas) {
-    updateData.status = "finalizada";
-    updateData.finalizadoEm = FieldValue.serverTimestamp();
-    updateData.kmPercorridos = totalKm;
-    updateData.valorEntregaCliente = valorEntregaCliente;
-    updateData.valorEntregaMotoboy = valorEntregaMotoboy;
-    updateData.lucroPlataforma = lucroPlataforma;
+const updateData = { paradasStatus };
+if (todasFinalizadas) {
+  updateData.status = "finalizada";
+  updateData.finalizadoEm = FieldValue.serverTimestamp();
+  updateData.kmPercorridos = totalKm;
+  updateData.valorEntregaCliente = valorEntregaCliente;
+  
+  // 🔥 CALCULAR VALOR COM BÔNUS
+  let valorBaseMotoboy = totalKm <= 5 ? 8 : totalKm * 1.5 + taxaParada;
+  let bonusAplicado = 0;
+  
+  // Verifica se o motoboy tem bônus válido
+  if (motoboy.bonusKm && motoboy.bonusValidoAte) {
+    // Bônus é válido por 1 semana (7 dias)
+    const bonusDate = motoboy.bonusValidoAte.toDate();
+    const now = new Date();
+    const diffTime = Math.abs(now - bonusDate);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays <= 7) {
+      bonusAplicado = totalKm * motoboy.bonusKm;
+      valorBaseMotoboy += bonusAplicado;
+    }
   }
+  
+  updateData.valorEntregaMotoboy = valorBaseMotoboy;
+  updateData.bonusAplicado = bonusAplicado; // Para histórico
+  updateData.lucroPlataforma = valorEntregaCliente - valorBaseMotoboy;
+}
   await entregaRef.update(updateData);
 
-  // Atualiza saldo, ranking e pontos do motoboy
+  // Atualiza saldo, ranking, pontos e medalhas
   if (todasFinalizadas) {
-    const motoboyRef = db.collection("motoboys").doc(motoboyId);
+    // 🔥 CORREÇÃO: coleção é "users", não "motoboys"
+    const motoboyRef = db.collection("users").doc(motoboyId);
     const motoboySnap = await motoboyRef.get();
-    if (motoboySnap.exists) {
-      const motoboy = motoboySnap.data();
-      const novoSaldo = (motoboy.saldoDisponivel || 0) + valorEntregaMotoboy;
-      const novasEntregas = (motoboy.entregasConcluidas || 0) + 1;
-      const novosPontos = (motoboy.pontosSemana || 0) + 10;
-
-      await motoboyRef.update({
-        saldoDisponivel: novoSaldo,
-        entregasConcluidas: novasEntregas,
-        pontosSemana: novosPontos,
-      });
-
-      const semanaId = getSemanaId();
-      const rankingRef = db.collection("ranking").doc(semanaId);
-      const rankingSnap = await rankingRef.get();
-      let listaMotoboys = [];
-
-      if (rankingSnap.exists) {
-        listaMotoboys = rankingSnap.data().listaMotoboys || [];
-        const idx = listaMotoboys.findIndex((m) => m.motoboyId === motoboyId);
-        if (idx >= 0) listaMotoboys[idx].pontos = novosPontos;
-        else listaMotoboys.push({ motoboyId, pontos: novosPontos });
-      } else {
-        listaMotoboys.push({ motoboyId, pontos: novosPontos });
-      }
-
-      listaMotoboys.sort((a, b) => b.pontos - a.pontos);
-      listaMotoboys = listaMotoboys.map((m, i) => ({ ...m, posicao: i + 1 }));
-      await rankingRef.set({ semanaId, listaMotoboys });
+    if (!motoboySnap.exists) {
+      throw new functions.https.HttpsError("not-found", "Motoboy não encontrado");
     }
+
+    const motoboy = motoboySnap.data();
+    const nomeMotoboy = motoboy.nome || "Motoboy";
+
+    // 🔥 USAR FieldValue.increment() para evitar race conditions
+    await motoboyRef.update({
+      saldoDisponivel: FieldValue.increment(valorEntregaMotoboy),
+      entregasConcluidas: FieldValue.increment(1),
+      pontosSemana: FieldValue.increment(10),
+    });
+
+    // Buscar os valores atualizados
+    const motoboyAtualizado = await motoboyRef.get();
+    const dadosAtualizados = motoboyAtualizado.data();
+    const novasEntregas = dadosAtualizados.entregasConcluidas || 0;
+
+    // 🏅 Concede medalhas
+    await concederMedalhasAutomatica(motoboyRef, novasEntregas);
+
+    // 🔁 Atualiza ranking
+    const semanaId = getSemanaId();
+    console.log(`🔄 Atualizando ranking para semana: ${semanaId}`);
+    const rankingRef = db.collection("ranking").doc(semanaId);
+    const rankingSnap = await rankingRef.get();
+
+    let listaMotoboys = [];
+    if (rankingSnap.exists) {
+      listaMotoboys = rankingSnap.data().listaMotoboys || [];
+    }
+
+    // Atualiza ou adiciona o motoboy
+    const idx = listaMotoboys.findIndex(m => m.motoboyId === motoboyId);
+    if (idx >= 0) {
+      listaMotoboys[idx] = { ...listaMotoboys[idx], pontos: dadosAtualizados.pontosSemana || 0, nome: nomeMotoboy };
+    } else {
+      listaMotoboys.push({
+        motoboyId,
+        nome: nomeMotoboy,
+        pontos: dadosAtualizados.pontosSemana || 0,
+        medalhas: dadosAtualizados.medalhas || []
+      });
+    }
+
+    // Ordena e atualiza posições
+    listaMotoboys.sort((a, b) => (b.pontos || 0) - (a.pontos || 0));
+    listaMotoboys = listaMotoboys.map((m, i) => ({ ...m, posicao: i + 1 }));
+
+    await rankingRef.set({
+      semanaId,
+      listaMotoboys,
+      atualizadoEm: FieldValue.serverTimestamp()
+    });
+
+    console.log(`✅ Ranking atualizado para ${nomeMotoboy} com ${dadosAtualizados.pontosSemana || 0} pontos`);
   }
 
   return { message: `Parada ${paradaIndex + 1} finalizada com sucesso!` };
 }
 
 // ===============================
-// 🔹 WRAPPER onCall (app Android / client)
+// 🔹 WRAPPERS ONCALL / ONREQUEST
 // ===============================
 exports.finalizarEntrega = functions.https.onCall(async (request) => {
   const data = request.data;
-  console.log("📥 Dados recebidos no onCall:", JSON.stringify(data, null, 2));
-  console.log("🆔 UID do usuário:", request.auth?.uid);
-
   const { entregaId, motoboyId, paradaIndex } = data || {};
   if (!entregaId || !motoboyId || paradaIndex === undefined || paradaIndex === null) {
     throw new functions.https.HttpsError(
@@ -135,17 +207,13 @@ exports.finalizarEntrega = functions.https.onCall(async (request) => {
   }
 
   try {
-    const result = await finalizarEntregaLogic({ entregaId, motoboyId, paradaIndex });
-    return result;
+    return await finalizarEntregaLogic({ entregaId, motoboyId, paradaIndex });
   } catch (err) {
     console.error("❌ Erro onCall:", err);
     throw err;
   }
 });
 
-// ===============================
-// 🔹 WRAPPER onRequest (shell / curl)
-// ===============================
 exports.finalizarEntregaHttp = functions.https.onRequest(async (req, res) => {
   try {
     const result = await finalizarEntregaLogic(req.body);
@@ -156,7 +224,7 @@ exports.finalizarEntregaHttp = functions.https.onRequest(async (req, res) => {
 });
 
 // ===============================
-// 🔹 FUNÇÃO: ENVIAR EMAIL DE CONTATO
+// 🔹 FUNÇÃO ENVIAR EMAIL DE CONTATO
 // ===============================
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 
@@ -187,7 +255,7 @@ exports.sendContactEmail = onDocumentCreated("contatos/{docId}", async (event) =
 });
 
 // ===============================
-// 🔹 FUNÇÃO: SOLICITAR SAQUE (MANUAL) — COM SAQUE MÍNIMO DE R$100
+// 🔹 FUNÇÃO: SOLICITAR SAQUE
 // ===============================
 exports.solicitarSaque = functions.https.onCall(async (data, context) => {
   if (!context.auth || !context.auth.uid) {
@@ -204,7 +272,7 @@ exports.solicitarSaque = functions.https.onCall(async (data, context) => {
     throw new functions.https.HttpsError("failed-precondition", "O saque mínimo é de R$100.");
   }
 
-  const motoboyRef = db.collection("motoboys").doc(motoboyId);
+  const motoboyRef = db.collection("users").doc(motoboyId); // 🔥 Corrigido para "users"
   const motoboySnap = await motoboyRef.get();
   if (!motoboySnap.exists) {
     throw new functions.https.HttpsError("not-found", "Motoboy não encontrado.");
@@ -234,3 +302,49 @@ exports.solicitarSaque = functions.https.onCall(async (data, context) => {
   console.log(`✅ Saque solicitado: R$${valor} para ${motoboyId}`);
   return { message: "Saque solicitado com sucesso! Será processado toda terça-feira.", saqueId: saqueDoc.id, valor };
 });
+
+// ===============================
+// 🔹 FUNÇÃO: ZERAR PONTOS E APLICAR BÔNUS TODA SEGUNDA-FEIRA
+// ===============================
+exports.zerarPontosESetarBonus = onSchedule(
+  "0 0 * * 1", // toda segunda-feira à meia-noite
+  {
+    timeZone: "America/Sao_Paulo",
+    name: "zerarPontosESetarBonus" // opcional, mas recomendado
+  },
+  async (event) => {
+    console.log("🔄 Iniciando processo semanal: zerar pontos e aplicar bônus...");
+
+    const batch = db.batch();
+    const semanaAtual = getSemanaId();
+    const rankingRef = db.collection("ranking").doc(semanaAtual);
+    const rankingSnap = await rankingRef.get();
+
+    const todosMotoboys = await db.collection("users").where("tipo", "==", "motoboy").get();
+    todosMotoboys.forEach(doc => batch.update(doc.ref, { pontosSemana: 0 }));
+
+    if (rankingSnap.exists) {
+      const lista = rankingSnap.data().listaMotoboys || [];
+      const top10 = lista.slice(0, 10);
+      const top3 = lista.slice(0, 3);
+
+      todosMotoboys.forEach(doc => batch.update(doc.ref, { bonusKm: 0, bonusValidoAte: null }));
+
+      top3.forEach(item => batch.update(db.collection("users").doc(item.motoboyId), {
+        bonusKm: 0.15,
+        bonusValidoAte: FieldValue.serverTimestamp()
+      }));
+
+      top10.slice(3).forEach(item => batch.update(db.collection("users").doc(item.motoboyId), {
+        bonusKm: 0.10,
+        bonusValidoAte: FieldValue.serverTimestamp()
+      }));
+
+      console.log(`✅ Bônus aplicados: Top 3 (${top3.length}) + Top 10 (${top10.length - 3})`);
+    }
+
+    await batch.commit();
+    console.log(`✅ Processo semanal concluído para ${todosMotoboys.size} motoboys.`);
+  }
+);
+  
