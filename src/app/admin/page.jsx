@@ -123,7 +123,6 @@ export default function AdminDashboard() {
     <div className={styles.layout}>
       <Sidebar />
       <main className={styles.content}>
-        <h1 className={styles.title}>Painel Administrativo</h1>
 
         {/* Cards de Totais */}
         <div className={styles.cards}>

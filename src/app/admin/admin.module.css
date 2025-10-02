@@ -44,7 +44,7 @@
 .card p {
   font-size: 1.6rem;
   font-weight: bold;
-  color: var(--color-text);
+  color: var(--color-accent);
 }
 
 /* ---------------- Layout principal ---------------- */

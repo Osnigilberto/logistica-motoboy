@@ -35,7 +35,7 @@
 
 .nav li a {
   text-decoration: none;
-  color: var(--color-text);
+  color: var(--color-accent);
   font-weight: 500;
   display: block;
   padding: 0.5rem;
