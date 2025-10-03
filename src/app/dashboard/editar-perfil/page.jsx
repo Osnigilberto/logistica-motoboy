@@ -28,6 +28,7 @@ export default function EditarPerfil() {
 
   const [saving, setSaving] = useState(false);
 
+  // Preencher dados do profile
   useEffect(() => {
     if (!loading && user && profile) {
       setDados({
@@ -47,6 +48,7 @@ export default function EditarPerfil() {
     }
   }, [loading, user, profile]);
 
+  // Máscaras de documento e telefone
   const aplicarMascaraDocumento = (value) => {
     const v = value.replace(/\D/g, '');
     return dados.tipo === 'cliente'
@@ -68,6 +70,7 @@ export default function EditarPerfil() {
       : v.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
   };
 
+  // Atualizar estado ao digitar
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -80,11 +83,13 @@ export default function EditarPerfil() {
     }
   };
 
+  // Validação documento
   const validarDocumento = (valor) => {
     const apenasDigitos = valor.replace(/\D/g, '');
     return dados.tipo === 'cliente' ? apenasDigitos.length === 14 : apenasDigitos.length === 11;
   };
 
+  // Salvar alterações
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -109,27 +114,30 @@ export default function EditarPerfil() {
       const { doc, setDoc } = await import('firebase/firestore');
       const { db } = await import('@/firebase/firebaseClient');
 
-      await setDoc(doc(db, 'users', user.uid), {
-        email: user.email, // ✅ salva o email do Google
-        tipo: dados.tipo,
-        nome: dados.tipo === 'motoboy' ? dados.nome : '',
-        nomeEmpresa: dados.tipo === 'cliente' ? dados.nomeEmpresa : '',
-        documento: dados.documento,
-        telefone: dados.telefone,
-        endereco: {
-          rua: dados.rua,
-          numero: dados.numero,
-          cidade: dados.cidade,
-          estado: dados.estado,
-          pais: dados.pais,
+      await setDoc(
+        doc(db, 'users', user.uid),
+        {
+          email: user.email,
+          tipo: dados.tipo,
+          nome: dados.tipo === 'motoboy' ? dados.nome : '',
+          nomeEmpresa: dados.tipo === 'cliente' ? dados.nomeEmpresa : '',
+          documento: dados.documento,
+          telefone: dados.telefone,
+          endereco: {
+            rua: dados.rua,
+            numero: dados.numero,
+            cidade: dados.cidade,
+            estado: dados.estado,
+            pais: dados.pais,
+          },
+          responsavel: dados.responsavel,
+          contatoResponsavel: dados.contatoResponsavel,
+          statusPerfil: 'completo',
         },
-        responsavel: dados.responsavel,
-        contatoResponsavel: dados.contatoResponsavel,
-        statusPerfil: 'completo', // ✅ caso esteja ausente
-      }, { merge: true });
+        { merge: true }
+      );
 
-      await fetchProfile(user.uid); // ✅ atualiza o contexto
-
+      await fetchProfile(user.uid);
       toast.success('Perfil atualizado com sucesso!');
     } catch (err) {
       console.error(err);
@@ -150,123 +158,127 @@ export default function EditarPerfil() {
 
   return (
     <>
-      <form onSubmit={handleSubmit} className={styles.formContainer}>
-        <h2 className={styles.title}>Editar Perfil</h2>
-
-        <div className={styles.radioGroup}>
-          <label>
-            <input
-              type="radio"
-              name="tipo"
-              value="cliente"
-              checked={dados.tipo === 'cliente'}
-              onChange={handleChange}
-              disabled={saving}
-            />
-            Cliente
-          </label>
-          <label>
-            <input
-              type="radio"
-              name="tipo"
-              value="motoboy"
-              checked={dados.tipo === 'motoboy'}
-              onChange={handleChange}
-              disabled={saving}
-            />
-            Motoboy
-          </label>
-        </div>
-
-        {dados.tipo === 'cliente' ? (
-          <input
-            name="nomeEmpresa"
-            placeholder="Nome da empresa"
-            value={dados.nomeEmpresa}
-            onChange={handleChange}
-            className={styles.input}
-            required
-            disabled={saving}
-          />
-        ) : (
-          <input
-            name="nome"
-            placeholder="Seu nome completo"
-            value={dados.nome}
-            onChange={handleChange}
-            className={styles.input}
-            required
-            disabled={saving}
-          />
-        )}
-
-        <input
-          name="documento"
-          placeholder={dados.tipo === 'cliente' ? 'CNPJ' : 'CPF'}
-          value={dados.documento}
-          onChange={handleChange}
-          className={styles.input}
-          required
-          maxLength={18}
-          disabled={saving}
-        />
-
-        <input
-          name="telefone"
-          placeholder="Telefone"
-          value={dados.telefone}
-          onChange={handleChange}
-          className={styles.input}
-          maxLength={15}
-          disabled={saving}
-        />
-
-        <fieldset className={styles.fieldset}>
-          <legend className={styles.legend}>Endereço</legend>
-          {['rua', 'numero', 'cidade', 'estado', 'pais'].map((field) => (
-            <input
-              key={field}
-              name={field}
-              placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
-              value={dados[field]}
-              onChange={handleChange}
-              className={styles.input}
-              disabled={saving}
-            />
-          ))}
-        </fieldset>
-
-        <input
-          name="responsavel"
-          placeholder="Responsável"
-          value={dados.responsavel}
-          onChange={handleChange}
-          className={styles.input}
-          disabled={saving}
-        />
-        <input
-          name="contatoResponsavel"
-          placeholder="Contato do responsável"
-          value={dados.contatoResponsavel}
-          onChange={handleChange}
-          className={styles.input}
-          disabled={saving}
-        />
-
-        <button type="submit" className={styles.button} disabled={saving}>
-          {saving ? 'Salvando...' : 'Salvar Alterações'}
-        </button>
-
-        <button
-          onClick={() => router.push('/dashboard')}
-          type="button"
-          className={styles.voltar}
-        >
+      <main className={styles.container}>
+        {/* Botão de voltar no topo */}
+        <button type="button" onClick={() => router.back()} className={styles.buttonBack}>
           ← Voltar
         </button>
-      </form>
 
-      <ToastContainer position="top-right" autoClose={3000} />
+        <h2 className={styles.title}>Editar Perfil</h2>
+
+        <form onSubmit={handleSubmit} className={styles.formContainer}>
+          {/* Tipo: cliente ou motoboy */}
+          <div className={styles.radioGroup}>
+            <label className={styles.radioLabel}>
+              <input
+                type="radio"
+                name="tipo"
+                value="cliente"
+                checked={dados.tipo === 'cliente'}
+                onChange={handleChange}
+                disabled={saving}
+              />
+              Cliente
+            </label>
+            <label className={styles.radioLabel}>
+              <input
+                type="radio"
+                name="tipo"
+                value="motoboy"
+                checked={dados.tipo === 'motoboy'}
+                onChange={handleChange}
+                disabled={saving}
+              />
+              Motoboy
+            </label>
+          </div>
+
+          {/* Nome ou Nome da empresa */}
+          {dados.tipo === 'cliente' ? (
+            <input
+              name="nomeEmpresa"
+              placeholder="Nome da empresa"
+              value={dados.nomeEmpresa}
+              onChange={handleChange}
+              className={styles.input}
+              required
+              disabled={saving}
+            />
+          ) : (
+            <input
+              name="nome"
+              placeholder="Seu nome completo"
+              value={dados.nome}
+              onChange={handleChange}
+              className={styles.input}
+              required
+              disabled={saving}
+            />
+          )}
+
+          {/* Documento e telefone */}
+          <input
+            name="documento"
+            placeholder={dados.tipo === 'cliente' ? 'CNPJ' : 'CPF'}
+            value={dados.documento}
+            onChange={handleChange}
+            className={styles.input}
+            required
+            maxLength={18}
+            disabled={saving}
+          />
+          <input
+            name="telefone"
+            placeholder="Telefone"
+            value={dados.telefone}
+            onChange={handleChange}
+            className={styles.input}
+            maxLength={15}
+            disabled={saving}
+          />
+
+          {/* Endereço */}
+          <fieldset className={styles.fieldset}>
+            <legend className={styles.legend}>Endereço</legend>
+            {['rua', 'numero', 'cidade', 'estado', 'pais'].map((field) => (
+              <input
+                key={field}
+                name={field}
+                placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
+                value={dados[field]}
+                onChange={handleChange}
+                className={styles.input}
+                disabled={saving}
+              />
+            ))}
+          </fieldset>
+
+          {/* Responsável */}
+          <input
+            name="responsavel"
+            placeholder="Responsável"
+            value={dados.responsavel}
+            onChange={handleChange}
+            className={styles.input}
+            disabled={saving}
+          />
+          <input
+            name="contatoResponsavel"
+            placeholder="Contato do responsável"
+            value={dados.contatoResponsavel}
+            onChange={handleChange}
+            className={styles.input}
+            disabled={saving}
+          />
+
+          {/* Botão salvar */}
+          <button type="submit" className={styles.button} disabled={saving}>
+            {saving ? 'Salvando...' : 'Salvar Alterações'}
+          </button>
+        </form>
+
+        <ToastContainer position="top-right" autoClose={3000} />
+      </main>
     </>
   );
 }

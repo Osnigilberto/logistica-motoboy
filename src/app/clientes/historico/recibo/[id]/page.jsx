@@ -126,8 +126,8 @@ export default function ReciboClientePage() {
           <div className={styles.cardLinha}><FaStickyNote /><strong>Descrição:</strong> {entrega.descricao || '—'}</div>
 
           {/* Destinatário */}
-          <div className={styles.cardLinha}><FaUser /><strong>Destinatário:</strong> {entrega.destinatario || '—'}</div>
-          <div className={styles.cardLinha}><FaPhone /><strong>Telefone do Destinatário:</strong> {entrega.telefoneDestinatario || '—'}</div>
+          <div className={styles.cardLinha}><FaUser /><strong>Destinatário:</strong> {entrega.destinatarios?.map(d => d.nome).join(', ') || '—'}</div>
+          <div className={styles.cardLinha}><FaPhone /><strong>Telefone do Destinatário:</strong> {entrega.destinatarios?.map(d => d.telefone).join(', ') || '—'}</div>
 
           {/* Motoboy */}
           <div className={styles.cardLinha}>

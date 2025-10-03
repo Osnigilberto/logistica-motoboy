@@ -54,15 +54,22 @@ export default function Motoboys() {
               const motoboySnap = await getDoc(motoboyRef);
 
               if (motoboySnap.exists()) {
+                const data = motoboySnap.data();
+
+                // 🔹 Usa a foto do motoboy ou fallback
+                const photoURL = data.photoURL || '/avatar-padrao.png';
+
                 return {
                   id: motoboySnap.id,
-                  ...motoboySnap.data(),
+                  ...data,
+                  photoURL,
                   vinculoId,
                 };
               }
               return null;
             })
           );
+
           setMotoboys(motoboysData.filter(Boolean));
           setLoadingData(false);
         },
@@ -153,6 +160,7 @@ export default function Motoboys() {
   }
 
   if (loading || loadingData) {
+    // 🔹 Skeleton de carregamento
     return (
       <main className={styles.container}>
         <div className={styles.skeleton}></div>
@@ -175,7 +183,7 @@ export default function Motoboys() {
 
       <h1 className={styles.title}>Motoboys Vinculados</h1>
 
-      {/* 🔹 Formulário vincular */}
+      {/* 🔹 Formulário para vincular motoboy */}
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -217,10 +225,12 @@ export default function Motoboys() {
           {motoboys.map((m) => (
             <li key={m.id} className={styles.item}>
               <div className={styles.cardHeader}>
+                {/* 🔹 Avatar circular com fallback */}
                 <img
                   src={m.photoURL || '/avatar-padrao.png'}
                   alt={m.nome || 'Motoboy'}
                   className={styles.avatar}
+                  onError={(e) => (e.currentTarget.src = '/avatar-padrao.png')}
                 />
                 <div className={styles.cardInfo}>
                   <p><strong>Nome:</strong> {m.nome || '—'}</p>
@@ -228,6 +238,7 @@ export default function Motoboys() {
                   <p><strong>Telefone:</strong> {m.telefone || '—'}</p>
                 </div>
               </div>
+              {/* 🔹 Botão remover */}
               <button
                 className={styles.removeButton}
                 onClick={() => handleRemoverVinculo(m.vinculoId)}

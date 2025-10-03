@@ -1,17 +1,35 @@
-/* Container do formulário */
-.formContainer {
+.container {
   max-width: 600px;
   margin: 2rem auto;
-  padding: 2rem;
-  background: #fdf6ec;
-  border-radius: 10px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  padding: 0 1rem;
   font-family: 'Inter', sans-serif;
   color: #4e342e;
+}
+
+.buttonBack {
+  display: inline-block;
+  margin-bottom: 1.5rem;
+  background: transparent;
+  border: none;
+  color: var(--color-accent);
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.buttonBack:hover {
+  color: #b2592e;
+}
+
+.formContainer {
+  background: #fdf6ec;
+  padding: 2rem;
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   animation: fadeIn 0.4s ease;
 }
 
-/* Título */
 .title {
   text-align: center;
   font-size: 1.8rem;
@@ -20,7 +38,6 @@
   margin-bottom: 1.5rem;
 }
 
-/* Inputs e selects */
 .input,
 .select {
   width: 100%;
@@ -41,7 +58,6 @@
   box-shadow: 0 0 0 2px rgba(161, 136, 127, 0.3);
 }
 
-/* Grupo de rádio */
 .radioGroup {
   display: flex;
   justify-content: center;
@@ -65,8 +81,6 @@
   height: 18px;
 }
 
-
-/* Fieldset e legend */
 .fieldset {
   border: 1px solid #d7ccc8;
   border-radius: 8px;
@@ -81,7 +95,6 @@
   margin-bottom: 0.7rem;
 }
 
-/* Botão principal */
 .button {
   margin-top: 1.5rem;
   width: 100%;
@@ -105,21 +118,6 @@
   cursor: not-allowed;
 }
 
-/* Link voltar */
-.voltar {
-  display: inline-block;
-  margin-top: 1rem;
-  color: #6d4c41;
-  text-decoration: none;
-  font-weight: 500;
-  transition: color 0.2s ease;
-}
-
-.voltar:hover {
-  color: #ca6c3d;
-}
-
-/* Spinner loading */
 .spinnerWrapper {
   display: flex;
   flex-direction: column;
@@ -140,7 +138,6 @@
   margin-bottom: 12px;
 }
 
-/* Animações */
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -158,10 +155,9 @@
   }
 }
 
-/* Responsividade */
 @media (max-width: 600px) {
   .formContainer {
-    margin: 1rem;
     padding: 1.5rem;
+    margin: 1rem;
   }
 }

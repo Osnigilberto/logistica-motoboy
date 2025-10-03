@@ -1,6 +1,6 @@
 .container {
   padding: 2rem;
-  max-width: 750px;
+  max-width: 800px;
   margin: 0 auto;
   font-family: var(--font-sans);
   color: var(--color-text);
@@ -29,7 +29,7 @@
 .title {
   font-size: 2.2rem;
   font-weight: 700;
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
   color: var(--color-accent);
   text-align: center;
 }
@@ -99,18 +99,21 @@
   animation: spin 0.8s linear infinite;
 }
 
+/* Lista de cards */
 .list {
   list-style: none;
   padding: 0;
   margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
 }
 
 .item {
-  background-color: #fff;
+  background-color: var(--color-surface);
   border-radius: 16px;
   padding: 1.25rem 1.5rem;
-  margin-bottom: 1rem;
-  box-shadow: 0 4px 10px rgb(0 0 0 / 5%);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 6%);
   transition: box-shadow 0.3s ease, transform 0.2s ease;
   display: flex;
   flex-direction: column;
@@ -118,7 +121,7 @@
 }
 
 .item:hover {
-  box-shadow: 0 8px 18px rgb(0 0 0 / 12%);
+  box-shadow: 0 8px 20px rgb(0 0 0 / 12%);
   transform: translateY(-2px);
 }
 
@@ -129,16 +132,17 @@
 }
 
 .avatar {
-  width: 70px;
-  height: 70px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   object-fit: cover;
-  border: 3px solid var(--color-accent);
-  transition: transform 0.3s ease;
+  border: 2px solid var(--color-accent);
+  transition: transform 0.2s ease, border-color 0.3s ease;
 }
 
 .avatar:hover {
   transform: scale(1.05);
+  border-color: var(--color-accent-dark);
 }
 
 .cardInfo p {
@@ -171,6 +175,7 @@
   margin-top: 2rem;
 }
 
+/* Skeleton de carregamento */
 .skeleton {
   height: 50px;
   background-color: var(--color-border);
@@ -188,7 +193,7 @@
   50% { opacity: 0.4; }
 }
 
-/* 🔹 Responsividade */
+/* Responsividade */
 @media (max-width: 480px) {
   .vincularContainer {
     flex-direction: column;
@@ -198,8 +203,8 @@
     align-items: flex-start;
   }
   .avatar {
-    width: 60px;
-    height: 60px;
+    width: 70px;
+    height: 70px;
   }
   .removeButton {
     width: 100%;

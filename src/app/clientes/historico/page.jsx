@@ -115,14 +115,15 @@ export default function HistoricoClientePage() {
               {/* Destinatário */}
               <div className={styles.cardLinha}>
                 <FaUser />
-                <strong>Destinatário:</strong> {entrega.destinatario || '—'}
+                <strong>Destinatário:</strong> {entrega.destinatarios?.map(d => d.nome).join(', ') || '—'}
               </div>
 
               {/* Telefone do destinatário */}
               <div className={styles.cardLinha}>
                 <FaPhone />
-                <strong>Telefone do destinatário:</strong> {entrega.telefoneDestinatario || '—'}
+                <strong>Telefone do destinatário:</strong> {entrega.destinatarios?.map(d => d.telefone).join(', ') || '—'}
               </div>
+
 
               <div className={styles.cardLinha}>
                 <FaUser />

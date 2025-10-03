@@ -27,30 +27,6 @@
 }
 
 /* =======================
-   Dark mode automático
-   ======================= */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg: #1E1E1E;
-    --color-surface: #2C2C2C;
-    --color-accent: #CA6C3D;
-    --color-accent-dark: #E07B47;
-    --color-primary: #CA6C3D;
-    --color-primary-dark: #E07B47;
-    --color-secondary: #2D9CDB;
-
-    --color-text: #F0F0F0;
-    --color-muted: #AAAAAA;
-
-    --color-border: #444444;
-
-    --color-success: #4CAF50;
-    --color-error: #F44336;
-    --color-warning: #FFC107;
-  }
-}
-
-/* =======================
    Estilos globais
    ======================= */
 
