@@ -26,6 +26,13 @@
   --color-warning: #FFC107;  /* amarelo */
 }
 
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden; /* 🔑 remove scroll horizontal */
+}
+
+
 /* =======================
    Estilos globais
    ======================= */

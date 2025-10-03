@@ -82,7 +82,6 @@
 .mainContent {
   flex-grow: 1;
   margin-left: 0;
-  padding: 1rem;
   width: 100%;
   transition: margin-left 0.3s ease;
 }
