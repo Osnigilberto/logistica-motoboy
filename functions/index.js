@@ -4,7 +4,7 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const nodemailer = require("nodemailer");
-const { onSchedule } = require('firebase-functions/v2/scheduler');
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 require("dotenv").config(); // Carrega variáveis do arquivo .env
 
 admin.initializeApp();
@@ -48,7 +48,7 @@ const concederMedalhasAutomatica = async (motoboyRef, entregasConcluidas) => {
 
   if (novasMedalhas.length > 0) {
     await motoboyRef.update({
-      medalhas: FieldValue.arrayUnion(...novasMedalhas)
+      medalhas: FieldValue.arrayUnion(...novasMedalhas),
     });
   }
 };
@@ -60,9 +60,12 @@ async function finalizarEntregaLogic({ entregaId, motoboyId, paradaIndex }) {
   console.log("📦 Finalizando entrega:", { entregaId, motoboyId, paradaIndex });
 
   if (
-    typeof entregaId !== "string" || !entregaId.trim() ||
-    typeof motoboyId !== "string" || !motoboyId.trim() ||
-    paradaIndex === undefined || paradaIndex === null
+    typeof entregaId !== "string" ||
+    !entregaId.trim() ||
+    typeof motoboyId !== "string" ||
+    !motoboyId.trim() ||
+    paradaIndex === undefined ||
+    paradaIndex === null
   ) {
     throw new functions.https.HttpsError(
       "invalid-argument",
@@ -76,6 +79,14 @@ async function finalizarEntregaLogic({ entregaId, motoboyId, paradaIndex }) {
     throw new functions.https.HttpsError("not-found", "Entrega não encontrada");
   }
   const entrega = entregaSnap.data();
+
+  // ✅ Buscar o motoboy ANTES de usar (corrigido)
+  const motoboyRef = db.collection("users").doc(motoboyId);
+  const motoboySnap = await motoboyRef.get();
+  if (!motoboySnap.exists) {
+    throw new functions.https.HttpsError("not-found", "Motoboy não encontrado");
+  }
+  const motoboy = motoboySnap.data();
 
   const totalParadas = entrega.destinos?.length || 0;
   if (paradaIndex < 0 || paradaIndex >= totalParadas) {
@@ -95,57 +106,46 @@ async function finalizarEntregaLogic({ entregaId, motoboyId, paradaIndex }) {
   const lucroPlataforma = valorEntregaCliente - valorEntregaMotoboy;
 
   // Atualiza entrega
-const updateData = { paradasStatus };
-if (todasFinalizadas) {
-  updateData.status = "finalizada";
-  updateData.finalizadoEm = FieldValue.serverTimestamp();
-  updateData.kmPercorridos = totalKm;
-  updateData.valorEntregaCliente = valorEntregaCliente;
-  
-  // 🔥 CALCULAR VALOR COM BÔNUS
-  let valorBaseMotoboy = totalKm <= 5 ? 8 : totalKm * 1.5 + taxaParada;
-  let bonusAplicado = 0;
-  
-  // Verifica se o motoboy tem bônus válido
-  if (motoboy.bonusKm && motoboy.bonusValidoAte) {
-    // Bônus é válido por 1 semana (7 dias)
-    const bonusDate = motoboy.bonusValidoAte.toDate();
-    const now = new Date();
-    const diffTime = Math.abs(now - bonusDate);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays <= 7) {
-      bonusAplicado = totalKm * motoboy.bonusKm;
-      valorBaseMotoboy += bonusAplicado;
+  const updateData = { paradasStatus };
+  if (todasFinalizadas) {
+    updateData.status = "finalizada";
+    updateData.finalizadoEm = FieldValue.serverTimestamp();
+    updateData.kmPercorridos = totalKm;
+    updateData.valorEntregaCliente = valorEntregaCliente;
+
+    // 🔥 CALCULAR VALOR COM BÔNUS (agora motoboy está definido)
+    let valorBaseMotoboy = totalKm <= 5 ? 8 : totalKm * 1.5 + taxaParada;
+    let bonusAplicado = 0;
+
+    // Verifica se o motoboy tem bônus válido
+    if (motoboy.bonusKm && motoboy.bonusValidoAte) {
+      const bonusDate = motoboy.bonusValidoAte.toDate();
+      const now = new Date();
+      const diffTime = Math.abs(now - bonusDate);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays <= 7) {
+        bonusAplicado = totalKm * motoboy.bonusKm;
+        valorBaseMotoboy += bonusAplicado;
+      }
     }
+
+    updateData.valorEntregaMotoboy = valorBaseMotoboy;
+    updateData.bonusAplicado = bonusAplicado;
+    updateData.lucroPlataforma = valorEntregaCliente - valorBaseMotoboy;
   }
-  
-  updateData.valorEntregaMotoboy = valorBaseMotoboy;
-  updateData.bonusAplicado = bonusAplicado; // Para histórico
-  updateData.lucroPlataforma = valorEntregaCliente - valorBaseMotoboy;
-}
   await entregaRef.update(updateData);
 
   // Atualiza saldo, ranking, pontos e medalhas
   if (todasFinalizadas) {
-    // 🔥 CORREÇÃO: coleção é "users", não "motoboys"
-    const motoboyRef = db.collection("users").doc(motoboyId);
-    const motoboySnap = await motoboyRef.get();
-    if (!motoboySnap.exists) {
-      throw new functions.https.HttpsError("not-found", "Motoboy não encontrado");
-    }
-
-    const motoboy = motoboySnap.data();
     const nomeMotoboy = motoboy.nome || "Motoboy";
 
-    // 🔥 USAR FieldValue.increment() para evitar race conditions
     await motoboyRef.update({
-      saldoDisponivel: FieldValue.increment(valorEntregaMotoboy),
+      saldoDisponivel: FieldValue.increment(updateData.valorEntregaMotoboy),
       entregasConcluidas: FieldValue.increment(1),
       pontosSemana: FieldValue.increment(10),
     });
 
-    // Buscar os valores atualizados
     const motoboyAtualizado = await motoboyRef.get();
     const dadosAtualizados = motoboyAtualizado.data();
     const novasEntregas = dadosAtualizados.entregasConcluidas || 0;
@@ -153,7 +153,7 @@ if (todasFinalizadas) {
     // 🏅 Concede medalhas
     await concederMedalhasAutomatica(motoboyRef, novasEntregas);
 
-    // 🔁 Atualiza ranking
+    // 🔁 Atualiza ranking semanal
     const semanaId = getSemanaId();
     console.log(`🔄 Atualizando ranking para semana: ${semanaId}`);
     const rankingRef = db.collection("ranking").doc(semanaId);
@@ -164,27 +164,29 @@ if (todasFinalizadas) {
       listaMotoboys = rankingSnap.data().listaMotoboys || [];
     }
 
-    // Atualiza ou adiciona o motoboy
-    const idx = listaMotoboys.findIndex(m => m.motoboyId === motoboyId);
+    const idx = listaMotoboys.findIndex((m) => m.motoboyId === motoboyId);
     if (idx >= 0) {
-      listaMotoboys[idx] = { ...listaMotoboys[idx], pontos: dadosAtualizados.pontosSemana || 0, nome: nomeMotoboy };
+      listaMotoboys[idx] = {
+        ...listaMotoboys[idx],
+        pontos: dadosAtualizados.pontosSemana || 0,
+        nome: nomeMotoboy,
+      };
     } else {
       listaMotoboys.push({
         motoboyId,
         nome: nomeMotoboy,
         pontos: dadosAtualizados.pontosSemana || 0,
-        medalhas: dadosAtualizados.medalhas || []
+        medalhas: dadosAtualizados.medalhas || [],
       });
     }
 
-    // Ordena e atualiza posições
     listaMotoboys.sort((a, b) => (b.pontos || 0) - (a.pontos || 0));
     listaMotoboys = listaMotoboys.map((m, i) => ({ ...m, posicao: i + 1 }));
 
     await rankingRef.set({
       semanaId,
       listaMotoboys,
-      atualizadoEm: FieldValue.serverTimestamp()
+      atualizadoEm: FieldValue.serverTimestamp(),
     });
 
     console.log(`✅ Ranking atualizado para ${nomeMotoboy} com ${dadosAtualizados.pontosSemana || 0} pontos`);
@@ -272,7 +274,7 @@ exports.solicitarSaque = functions.https.onCall(async (data, context) => {
     throw new functions.https.HttpsError("failed-precondition", "O saque mínimo é de R$100.");
   }
 
-  const motoboyRef = db.collection("users").doc(motoboyId); // 🔥 Corrigido para "users"
+  const motoboyRef = db.collection("users").doc(motoboyId);
   const motoboySnap = await motoboyRef.get();
   if (!motoboySnap.exists) {
     throw new functions.https.HttpsError("not-found", "Motoboy não encontrado.");
@@ -307,12 +309,9 @@ exports.solicitarSaque = functions.https.onCall(async (data, context) => {
 // 🔹 FUNÇÃO: ZERAR PONTOS E APLICAR BÔNUS TODA SEGUNDA-FEIRA
 // ===============================
 exports.zerarPontosESetarBonus = onSchedule(
-  "0 0 * * 1", // toda segunda-feira à meia-noite
-  {
-    timeZone: "America/Sao_Paulo",
-    name: "zerarPontosESetarBonus" // opcional, mas recomendado
-  },
-  async (event) => {
+  "0 0 * * 1",
+  { timeZone: "America/Sao_Paulo", name: "zerarPontosESetarBonus" },
+  async () => {
     console.log("🔄 Iniciando processo semanal: zerar pontos e aplicar bônus...");
 
     const batch = db.batch();
@@ -321,24 +320,28 @@ exports.zerarPontosESetarBonus = onSchedule(
     const rankingSnap = await rankingRef.get();
 
     const todosMotoboys = await db.collection("users").where("tipo", "==", "motoboy").get();
-    todosMotoboys.forEach(doc => batch.update(doc.ref, { pontosSemana: 0 }));
+    todosMotoboys.forEach((doc) => batch.update(doc.ref, { pontosSemana: 0 }));
 
     if (rankingSnap.exists) {
       const lista = rankingSnap.data().listaMotoboys || [];
       const top10 = lista.slice(0, 10);
       const top3 = lista.slice(0, 3);
 
-      todosMotoboys.forEach(doc => batch.update(doc.ref, { bonusKm: 0, bonusValidoAte: null }));
+      todosMotoboys.forEach((doc) => batch.update(doc.ref, { bonusKm: 0, bonusValidoAte: null }));
 
-      top3.forEach(item => batch.update(db.collection("users").doc(item.motoboyId), {
-        bonusKm: 0.15,
-        bonusValidoAte: FieldValue.serverTimestamp()
-      }));
+      top3.forEach((item) =>
+        batch.update(db.collection("users").doc(item.motoboyId), {
+          bonusKm: 0.15,
+          bonusValidoAte: FieldValue.serverTimestamp(),
+        })
+      );
 
-      top10.slice(3).forEach(item => batch.update(db.collection("users").doc(item.motoboyId), {
-        bonusKm: 0.10,
-        bonusValidoAte: FieldValue.serverTimestamp()
-      }));
+      top10.slice(3).forEach((item) =>
+        batch.update(db.collection("users").doc(item.motoboyId), {
+          bonusKm: 0.1,
+          bonusValidoAte: FieldValue.serverTimestamp(),
+        })
+      );
 
       console.log(`✅ Bônus aplicados: Top 3 (${top3.length}) + Top 10 (${top10.length - 3})`);
     }
@@ -347,4 +350,3 @@ exports.zerarPontosESetarBonus = onSchedule(
     console.log(`✅ Processo semanal concluído para ${todosMotoboys.size} motoboys.`);
   }
 );
-  
